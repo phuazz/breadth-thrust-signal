@@ -10,6 +10,7 @@
     --bg: #ffffff; --ink: #1a1a1a; --muted: #5c6670; --line: #e3e7eb;
     --card: #f7f9fb; --accent: #1f6feb; --on: #137333; --off: #c4c9ce;
     --warn-bg: #fff4e5; --warn-ink: #8a5300; --warn-line: #f0c27a;
+    --info-bg: #eef4fb; --info-ink: #23415e; --info-line: #cdddf0;
   }
   * { box-sizing: border-box; }
   body {
@@ -25,6 +26,14 @@
     background: var(--warn-bg); color: var(--warn-ink); border: 1px solid var(--warn-line);
     border-radius: 8px; padding: 11px 14px; margin: 0 0 20px; font-size: 13.5px;
   }
+  .info {
+    background: var(--info-bg); color: var(--info-ink); border: 1px solid var(--info-line);
+    border-radius: 8px; padding: 11px 14px; margin: 0 0 20px; font-size: 13px;
+  }
+  .info b { color: var(--info-ink); }
+  .noise-ok { font-weight: 700; }
+  .badge { display: inline-block; font-size: 10px; line-height: 1; padding: 2px 5px;
+    border-radius: 4px; background: var(--on); color: #fff; margin-left: 4px; vertical-align: middle; }
   .grid { display: grid; gap: 14px; }
   .status { display: grid; grid-template-columns: auto 1fr; gap: 22px; align-items: center;
     background: var(--card); border: 1px solid var(--line); border-radius: 12px; padding: 18px 22px; }
@@ -53,6 +62,7 @@
   <h1>Breadth-Thrust Signal</h1>
   <p class="sub">Risk-on conviction meter — the bullish mirror of the Equity Defense Dashboard. Grouped four-dimension breadth score, with a conditional forward-return study versus a bootstrap baseline.</p>
   <div id="banner"></div>
+  <div id="scope"></div>
   <div id="status" class="status"></div>
 
   <h2>SPX with thrust events and conviction score</h2>
@@ -62,6 +72,7 @@
   <h2>Forward SPX returns conditional on conviction — lift over baseline</h2>
   <p class="sub" style="font-size:13px">Win rate and median return measured on fresh thrust-event days (signal lagged one day). <b>Lift</b> is conditional minus the bootstrap unconditional baseline. A bare win rate means nothing without this comparison.</p>
   <div id="lift_table"></div>
+  <div id="verdict"></div>
 
   <h2>Methodology</h2>
   <div class="card" id="method"></div>
@@ -90,6 +101,25 @@ function renderBanner(d) {
     document.getElementById("banner").innerHTML =
       "<b>Survivorship-biased universe.</b> No point-in-time membership snapshot was found, so breadth is computed on a static current-member list. Forward returns will look cleaner than reality. Supply <code>data/constituents_csp1.json</code> for a publishable result.";
   }
+}
+
+function renderScope(d) {
+  const w = (d.study && d.study.window) || {};
+  const q = d.data_quality || {};
+  const bits = [];
+  if (w.start && w.end) {
+    bits.push(`<b>Study window ${w.start} → ${w.end}</b> (${w.trading_days} trading days). Conditional sample and bootstrap baseline are period-matched to this window.`);
+  }
+  if (!d.survivorship_bias) {
+    bits.push("Membership is <b>point-in-time</b> (survivorship-correct).");
+  }
+  if (q.ever_members && q.unfetchable_members) {
+    bits.push(`Residual data-layer leak: of ${q.ever_members} ever-members, <b>${q.unfetchable_members}</b> are delisted/renamed beyond the price source and drop from historical breadth (these skew weak, mildly understating past declines).`);
+  }
+  if (!bits.length) return;
+  const el = document.getElementById("scope");
+  el.className = "info";
+  el.innerHTML = bits.join(" ");
 }
 
 function renderStatus(d) {
@@ -154,9 +184,14 @@ function renderLift(d) {
         const r = r0[h];
         if (!r || r.n === 0) return "<td>—</td>";
         const lift = r.win_lift;
-        const cls = lift > 0.1 ? "lift-hi" : (lift > 0 ? "lift-mid" : "");
+        // Colour only when the conditional win rate clears the 95th pct of the
+        // baseline band (win_beyond_noise). A positive lift INSIDE the band is
+        // not distinguishable from sampling noise, so it gets no green.
+        const cls = r.win_beyond_noise ? "lift-hi" : "";
         const lc = lift >= 0 ? "pos" : "neg";
-        return `<td class="${cls}">${pct(r.win_rate)}<br><span class="${lc}">${signed(lift)}</span></td>`;
+        const badge = r.win_beyond_noise ? '<span class="badge" title="above 95th pct of baseline band">clears noise</span>' : "";
+        const wr = r.win_beyond_noise ? `<span class="noise-ok">${pct(r.win_rate)}</span>` : pct(r.win_rate);
+        return `<td class="${cls}">${wr}${badge}<br><span class="${lc}">${signed(lift)}</span></td>`;
       }).join("") + "</tr>";
     html += `<tr><td></td><td style="color:var(--muted)">median (lift)</td>` +
       horizons.map(h => {
@@ -170,6 +205,27 @@ function renderLift(d) {
   document.getElementById("lift_table").innerHTML = html;
 }
 
+function renderVerdict(d) {
+  const rows = d.study.lift;
+  const get = (thr, h) => rows.find(r => r.threshold === thr && r.horizon === h);
+  const r3 = get(3, "6m");
+  if (!r3) return;
+  // Decision criterion (brief): score >= 3 at 6m — median meaningfully above
+  // unconditional AND win-rate lift clearing the baseline noise band.
+  const medPass = r3.ret_lift !== null && r3.ret_lift > 0.01;
+  const winPass = !!r3.win_beyond_noise;
+  const el = document.getElementById("verdict");
+  el.className = "info";
+  el.innerHTML =
+    `<b>Read against the decision criterion (score ≥ 3, 6-month).</b> ` +
+    `Median forward return ${signed(r3.median_ret)} vs baseline ${signed(r3.base_median_ret)} ` +
+    `(lift ${signed(r3.ret_lift)}) — ${medPass ? "meaningfully above unconditional ✓" : "not meaningfully above ✗"}. ` +
+    `Win rate ${pct(r3.win_rate)} vs baseline ${pct(r3.base_win_rate)} ` +
+    `(lift ${signed(r3.win_lift)}) — ${winPass ? "clears the noise band ✓" : "sits <i>inside</i> the baseline band, not distinguishable from noise ✗"}. ` +
+    `<br><b>Caveats:</b> only n=${r3.n} fresh events at score ≥ 3 over the window, so the win rate carries a binomial standard error near ±10pp. ` +
+    `The win-rate lift also <i>falls</i> as conviction rises (strongest at ≥1/≥2, weakest at ≥3/≥4), the opposite of what a conviction meter should show — treat as suggestive, not a confirmed standalone ≥3 timing trigger.`;
+}
+
 function renderMethod(d) {
   document.getElementById("method").innerHTML =
     `<p style="margin:6px 0">${d.config.note}</p>
@@ -178,9 +234,11 @@ function renderMethod(d) {
 
 load().then(d => {
   renderBanner(d);
+  renderScope(d);
   renderStatus(d);
   renderCharts(d);
   renderLift(d);
+  renderVerdict(d);
   renderMethod(d);
   document.getElementById("foot").textContent =
     "Generated " + (d.generated_utc || "—") + " · simulated study, not investment advice · single-source S&P 500 proxy breadth";

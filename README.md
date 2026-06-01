@@ -5,9 +5,13 @@ study for the broad US market. It is the bullish mirror of the
 `equity-defense-dashboard`: where that project detects when to go defensive,
 this one quantifies how strongly market breadth is confirming a turn upward.
 
-**Status:** Phase 0 — engine, study and pipeline built and unit-tested on
-synthetic data (2026-06-01). No live data has been fetched yet. Run the local
-data step below to populate the dashboard.
+**Status:** Phase 0 — first real, survivorship-correct run completed
+(2026-06-01). Point-in-time iShares CSP1 membership applied, so the effective
+study window is **2018-01 to 2026-05 (~2,109 trading days)**: before the first
+2018 CSP1 snapshot the membership mask has no members, so 1999–2017 carries no
+breadth and is excluded by the thin-breadth guard. Both published breadth-thrust
+anchors (2019-01-04, 2023-11-03) are detected without tuning. Headline verdict
+is suggestive but not confirmed — see below.
 
 Personal research artefact. Not investment advice. Not affiliated with any
 regulated fund.
@@ -139,21 +143,50 @@ breadth-thrust-signal/
 │   ├── forward_returns.py   # conditional study + bootstrap baseline (pure, tested)
 │   ├── membership.py        # point-in-time masking + fallback
 │   ├── data_providers.py    # price + volume fetch/cache (yfinance)
-│   └── pipeline.py          # fetch -> mask -> compute -> study -> render
+│   ├── pipeline.py          # fetch -> mask -> compute -> study -> render
+│   └── validate_d1.py       # cross-check D1 thrust dates vs published anchors
 ├── tests/test_engine.py     # 6 tests: thrust detection, scoring, no-lookahead, date edges
 ├── data/                    # signals.json, panel_cache.json, constituents_csp1.json
 ├── template.html            # dashboard source (light theme, Plotly)
 └── docs/index.html          # built GitHub Pages output (do not edit)
 ```
 
-## Open issues / next steps
+## First-run findings (2026-06-01)
 
-- No live data fetched yet — run the local step above.
-- Pre-2018 point-in-time membership is unresolved (survivorship caveat).
-- Decision criteria (from the brief): six-month median return at score ≥ 3
-  should be meaningfully above unconditional, and the win-rate lift should clear
-  the baseline noise band. Evaluate once real data is in.
-- If results hold, wire D-score ≥ 3 as a risk-on accelerator into
-  `equity-defense-dashboard`.
+Decision criterion (the brief): at score ≥ 3, six-month horizon, the median
+forward return should be meaningfully above unconditional **and** the win-rate
+lift should clear the baseline noise band. Both conditional sample and bootstrap
+baseline are period-matched to the 2018–2026 valid-breadth window.
+
+- **Score ≥ 3, 6m (n = 14 fresh events):** median +11.2% vs baseline +7.3%
+  (lift +3.9pp) — **passes** the median test. Win rate 78.6% vs baseline 74.8%,
+  but 78.6% sits *inside* the baseline 5–95 band [68.2%, 81.0%] — **fails** the
+  beyond-noise test.
+- **The win-rate lift runs backwards in conviction:** 0.885 (≥1) → 0.864 (≥2)
+  → 0.786 (≥3) → 0.500 (≥4, n = 2). The beyond-noise flag fires at ≥1 and ≥2,
+  not at the ≥3 decision threshold. For a conviction meter this is the wrong
+  direction and undercuts the "more dimensions = stronger edge" premise.
+- **Sample is thin.** 26 events at ≥1, 14 at ≥3, 2 at ≥4 over eight years; the
+  binomial SE on a 14-event win rate is ~±10pp, so the ≥3 win lift is not
+  statistically distinguishable from zero.
+
+**Verdict:** the mechanism is real (anchors validated, untuned) and the 6-month
+median lift is real and positive, but the specific ≥3 win-rate criterion is not
+met and conviction-monotonicity is inverted. Treat as suggestive, **not** a
+confirmed standalone ≥3 timing trigger. Do not wire into `equity-defense-
+dashboard` on this evidence alone.
+
+## Known caveats / next steps
+
+- **Residual data-layer leak.** Membership is survivorship-correct, but 111 of
+  715 ever-members were delisted/renamed beyond Yahoo's reach and cannot be
+  fetched, so they drop from historical breadth (surfaced in `signals.json`
+  `data_quality` and the dashboard scope banner). Delisted names skew weak, so
+  their absence mildly understates past declines.
+- **Pre-2018 point-in-time membership is unresolved.** Extending before 2018
+  needs a reconstructed historical membership list and would be lower-confidence.
+- **Small-sample power.** Eight years yields too few fresh events to confirm a
+  ≥3 edge. Re-evaluate as the window lengthens, or test whether the cleaner
+  ≥1/≥2 6-month signal is the more honest object of study.
 
 *Last updated: 2026-06-01*

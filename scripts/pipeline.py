@@ -76,11 +76,47 @@ def resolve_membership(adj, vol):
 # ---------------------------------------------------------------------------
 
 
+def valid_window(composite: pd.DataFrame):
+    """First and last dates where breadth data is trustworthy (data_ok).
+
+    Conditional thrust events can only occur inside this window — outside it the
+    constituent panel is too thin (e.g. pre-2018 under point-in-time membership,
+    where the mask has no members). Returned as (lo, hi) Timestamps, or
+    (None, None) if no day is valid.
+    """
+    ok = composite.index[composite["data_ok"]]
+    if len(ok) == 0:
+        return None, None
+    return ok.min(), ok.max()
+
+
 def run_study(composite: pd.DataFrame, spx: pd.Series) -> dict:
+    # GUARD 3 (period-matching) — the bootstrap baseline must be drawn from the
+    # SAME era the conditional events can occur in. Conditional events live only
+    # in the valid-breadth window; bootstrapping the baseline over a longer span
+    # (e.g. 1999-2026 including the dot-com and GFC crashes when the panel has no
+    # members) would make the lift apples-to-oranges and silently overstate it.
+    # Restrict BOTH the conditional sample and the baseline to that window.
+    lo, hi = valid_window(composite)
+    if lo is not None:
+        in_win = (spx.index >= lo) & (spx.index <= hi)
+        spx = spx[in_win]
+        composite = composite.loc[(composite.index >= lo) & (composite.index <= hi)]
+
     cond = fr.conditional_table(composite, spx, thresholds=(1, 2, 3, 4), events_only=True)
     base = fr.unconditional_baseline(spx)
     lift = fr.lift_table(cond, base)
     return {
+        "window": {
+            "start": lo.strftime("%Y-%m-%d") if lo is not None else None,
+            "end": hi.strftime("%Y-%m-%d") if hi is not None else None,
+            "trading_days": int(len(spx)),
+            "note": (
+                "Conditional sample and bootstrap baseline are both restricted "
+                "to the valid-breadth window (data_ok days) so the lift is "
+                "period-matched, not measured against a different era."
+            ),
+        },
         "conditional": cond.to_dict(orient="records"),
         "baseline": base.to_dict(orient="records"),
         "lift": lift.replace({np.nan: None}).to_dict(orient="records"),
@@ -108,7 +144,15 @@ def current_status(composite: pd.DataFrame) -> dict:
 
 
 def timeline(composite: pd.DataFrame, spx: pd.Series) -> dict:
-    """Compact arrays for the dashboard charts."""
+    """Compact arrays for the dashboard charts.
+
+    Restricted to the valid-breadth window so the chart does not paint the
+    no-data pre-window era (all-zero by construction) as 18 years of measured
+    zero conviction.
+    """
+    lo, hi = valid_window(composite)
+    if lo is not None:
+        composite = composite.loc[(composite.index >= lo) & (composite.index <= hi)]
     idx = composite.index
     spx_aligned = spx.reindex(idx)
     return {
@@ -123,10 +167,11 @@ def timeline(composite: pd.DataFrame, spx: pd.Series) -> dict:
     }
 
 
-def build_payload(composite, spx, survivorship_bias) -> dict:
+def build_payload(composite, spx, survivorship_bias, data_quality=None) -> dict:
     return {
         "generated_utc": datetime.now(timezone.utc).isoformat(),
         "survivorship_bias": survivorship_bias,
+        "data_quality": data_quality or {},
         "config": {
             "memory_days": cb.DEFAULT_MEMORY_DAYS,
             "dimensions": ["d1", "d2", "d3", "d4"],
@@ -148,7 +193,12 @@ def render(payload: dict) -> None:
     blob = json.dumps(payload, separators=(",", ":"))
     if TEMPLATE.exists():
         html = TEMPLATE.read_text(encoding="utf-8")
-        html = html.replace("__SIGNALS_JSON__", blob)
+        # Replace ONLY the first occurrence — the data-island placeholder. The
+        # token also appears a second time as the sentinel in the JS fetch-
+        # fallback check (`if (raw === "__SIGNALS_JSON__")`); injecting the blob
+        # there too would splice JSON into a string literal and break the whole
+        # inline script. count=1 leaves the sentinel intact.
+        html = html.replace("__SIGNALS_JSON__", blob, 1)
         (DOCS / "index.html").write_text(html, encoding="utf-8")
         log.info("Wrote %s", DOCS / "index.html")
     (DATA / "signals.json").write_text(json.dumps(payload, indent=2), encoding="utf-8")
@@ -219,16 +269,43 @@ def main() -> int:
     adj = adj.drop(columns=[BENCHMARK])
     vol = vol.drop(columns=[c for c in [BENCHMARK] if c in vol.columns])
 
+    n_fetched = adj.shape[1]   # constituents with any price data in the panel
+
     adj, vol, survivorship = resolve_membership(adj, vol)
+    n_used = adj.shape[1]      # constituents matched to the membership universe
     panels = cb.build_panels(adj, vol)
     comp = cb.compute_composite(panels)
+
+    # Residual data-layer leak (distinct from survivorship of the MEMBERSHIP
+    # universe, which the PIT mask fixes): delisted / renamed former members
+    # that Yahoo no longer serves cannot be fetched, so they silently drop out
+    # of the historical breadth count. Disclose the magnitude. Delisted names
+    # skew weak, so their absence mildly understates past declines.
+    ever_members = None
+    if PIT_SNAPSHOTS.exists():
+        snaps = json.loads(PIT_SNAPSHOTS.read_text())["snapshots"]
+        ever_members = len({t for s in snaps.values() for t in s["tickers"]})
+    data_quality = {
+        "ever_members": ever_members,
+        "fetched_constituents": int(n_fetched),
+        "used_constituents": int(n_used),
+        "unfetchable_members": (int(ever_members - n_used) if ever_members else None),
+        "min_valid_constituents": cb.MIN_VALID_CONSTITUENTS,
+        "note": (
+            "Membership is point-in-time (survivorship-correct). Residual leak: "
+            "former members delisted/renamed beyond Yahoo's reach cannot be "
+            "fetched and drop from historical breadth. Days below "
+            "min_valid_constituents are flagged data_ok=false and excluded from "
+            "the study window."
+        ),
+    }
 
     # Data-integrity guard (vault rule): flag thin breadth days.
     thin = (~comp["data_ok"]).sum()
     if thin:
         log.warning("%d trading days have < %d valid constituents.", thin, cb.MIN_VALID_CONSTITUENTS)
 
-    payload = build_payload(comp, spx.reindex(comp.index), survivorship)
+    payload = build_payload(comp, spx.reindex(comp.index), survivorship, data_quality)
     render(payload)
     c = payload["current"]
     log.info("Done — as of %s, %d/4 dimensions on (score %.1f)", c["as_of"], c["n_dimensions"], c["score"])

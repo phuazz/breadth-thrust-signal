@@ -6,3 +6,5 @@ pytest-cache-files-*/
 venv/
 # Large cached panels are regenerated locally; keep the repo light.
 data/panel_cache.json
+# Local Claude Code permission grants — machine-specific, not for the repo.
+.claude/settings.local.json

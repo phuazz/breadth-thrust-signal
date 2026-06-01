@@ -225,7 +225,13 @@ const signed = x => (x === null || x === undefined || isNaN(x)) ? "—" : (x >= 
 const clamp = v => Math.max(0, Math.min(100, v));
 
 const PLOT_FONT = { family: "Inter, sans-serif", size: 12, color: "#3f464e" };
-const AXIS = { gridcolor: "#eef1f4", zerolinecolor: "#d6dbe0", linecolor: "#c8ccd2", tickfont: PLOT_FONT };
+// Fresh axis object per call. Plotly mutates layout axis objects in place
+// (writing type/range/_length), so a shared reference corrupts other axes and
+// other charts — give each axis its own object and an explicit type.
+const ax = (extra) => Object.assign(
+  { gridcolor: "#eef1f4", zerolinecolor: "#d6dbe0", linecolor: "#c8ccd2", tickfont: Object.assign({}, PLOT_FONT) },
+  extra || {}
+);
 
 function renderBanner(d) {
   if (d.survivorship_bias) {
@@ -315,8 +321,8 @@ function renderLastSignal(d) {
   Plotly.newPlot("lastsig_chart", [zero, band_lo, band_hi, medline, realized], {
     margin: { l: 54, r: 14, t: 10, b: 40 }, font: PLOT_FONT, paper_bgcolor: "#fff", plot_bgcolor: "#fff",
     legend: { orientation: "h", y: 1.14, font: PLOT_FONT },
-    xaxis: Object.assign({}, AXIS, { title: { text: "trading days since signal", font: PLOT_FONT }, tickvals: xb }),
-    yaxis: Object.assign({}, AXIS, { title: { text: "return from signal", font: PLOT_FONT }, tickformat: ".0%" })
+    xaxis: ax({ type: "linear", title: { text: "trading days since signal", font: PLOT_FONT }, tickmode: "array", tickvals: xb }),
+    yaxis: ax({ type: "linear", title: { text: "return from signal", font: PLOT_FONT }, tickformat: ".0%" })
   }, { displayModeBar: false, responsive: true });
 
   // ----- Table: realised vs projection at each trigger level -----
@@ -355,8 +361,14 @@ function renderCharts(d) {
     hovertemplate: "%{x}<br>thrust event<extra></extra>"
   };
   Plotly.newPlot("chart_price", [price, events], {
-    margin: { l: 54, r: 14, t: 8, b: 28 }, font: PLOT_FONT, showlegend: true,
-    legend: { orientation: "h", y: 1.14, font: PLOT_FONT }, yaxis: AXIS, xaxis: AXIS,
+    margin: { l: 58, r: 14, t: 8, b: 28 }, font: PLOT_FONT, showlegend: true,
+    legend: { orientation: "h", y: 1.14, font: PLOT_FONT },
+    yaxis: ax({
+      type: "log",
+      title: { text: "SPX (log scale)", font: PLOT_FONT },
+      tickmode: "array", tickvals: [2500, 3000, 3500, 4000, 5000, 6000, 7000], tickformat: ","
+    }),
+    xaxis: ax({ type: "date" }),
     paper_bgcolor: "#fff", plot_bgcolor: "#fff"
   }, { displayModeBar: false, responsive: true });
 
@@ -366,9 +378,9 @@ function renderCharts(d) {
     hovertemplate: "%{x}<br>%{y} of 4<extra></extra>"
   };
   Plotly.newPlot("chart_score", [score], {
-    margin: { l: 54, r: 14, t: 6, b: 28 }, font: PLOT_FONT, showlegend: false,
-    yaxis: Object.assign({}, AXIS, { range: [0, 4.2], dtick: 1, title: { text: "dimensions on", font: PLOT_FONT } }),
-    xaxis: AXIS, paper_bgcolor: "#fff", plot_bgcolor: "#fff"
+    margin: { l: 58, r: 14, t: 6, b: 28 }, font: PLOT_FONT, showlegend: false,
+    yaxis: ax({ type: "linear", range: [0, 4.2], dtick: 1, title: { text: "dimensions on", font: PLOT_FONT } }),
+    xaxis: ax({ type: "date" }), paper_bgcolor: "#fff", plot_bgcolor: "#fff"
   }, { displayModeBar: false, responsive: true });
 }
 

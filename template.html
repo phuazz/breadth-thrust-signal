@@ -105,6 +105,24 @@
 
   .foot { color: var(--ink-faint); font-size: 12.5px; margin-top: 40px; padding-top: 16px; border-top: 1px solid var(--border); }
   .empty { color: var(--ink-faint); font-style: italic; padding: 22px 0; }
+
+  /* Tabs */
+  .tabs { display: flex; flex-wrap: wrap; gap: 2px; border-bottom: 1px solid var(--border);
+    margin: 24px 0 22px; position: sticky; top: 0; background: var(--bg); z-index: 5; }
+  .tab { appearance: none; background: none; border: none; border-bottom: 2px solid transparent;
+    padding: 11px 16px; font: inherit; font-size: 14px; font-weight: 500; color: var(--ink-faint);
+    cursor: pointer; margin-bottom: -1px; white-space: nowrap; }
+  .tab:hover { color: var(--ink); }
+  .tab.active { color: var(--accent); border-bottom-color: var(--accent); font-weight: 600; }
+  .panel { display: none; }
+  .panel.active { display: block; }
+  .panel > h2:first-child { margin-top: 6px; }
+
+  /* Mapping table for the "Why 4, not 8" tab */
+  .maptbl td:nth-child(3), .maptbl th:nth-child(3) { text-align: left; }
+  .maptbl .d1 { color: var(--accent); font-weight: 600; }
+  .maptbl .excl { color: var(--bad); font-weight: 600; }
+  .maptbl .keep { color: var(--good); font-weight: 600; }
 </style>
 </head>
 <body>
@@ -116,35 +134,78 @@
   <div id="scope"></div>
   <div id="status" class="hero"></div>
 
-  <h2>How to use this</h2>
-  <ul class="use">
-    <li><b>Read the number as conviction, not a trade.</b> A high score means breadth has thrust — many names participating in a turn up — not that today is an entry point. It sizes how much the tape confirms a risk-on turn.</li>
-    <li><b>Lean on the six-month median, not the headline win rate.</b> On this 2018–2026 sample the durable edge is the lift in six-month median return. The win-rate edge only clears the baseline noise band at the looser ≥1/≥2 thresholds (see the lift table); the ≥3 win rate sits inside the band. Do not treat score ≥ 3 as a confirmed standalone trigger.</li>
-    <li><b>Respect entry discipline.</b> Thrusts are most useful deployed after flat or negative stretches, to avoid buying the peak of an already-strong run — not to chase one.</li>
-    <li><b>Combine, do not isolate.</b> This is the bullish mirror of the Equity Defense Dashboard. Use it to gauge risk-on conviction alongside your defensive signals, not as a lone timing model.</li>
-    <li><b>Mind the caveats.</b> Eight years is a thin sample (few fresh events); 111 of 715 former members are unfetchable and drop from history; pre-2018 is excluded. Treat conclusions as suggestive.</li>
-  </ul>
+  <nav class="tabs" id="tabs">
+    <button class="tab active" data-tab="signal">Signal</button>
+    <button class="tab" data-tab="latest">Latest signal</button>
+    <button class="tab" data-tab="study">Forward-return study</button>
+    <button class="tab" data-tab="formed">How it is formed</button>
+    <button class="tab" data-tab="why">Why 4, not 8</button>
+  </nav>
 
-  <h2>Tracking the latest signal</h2>
-  <p class="sub" style="font-size:13px">How the most recent thrust has actually played out versus the range its historical analogues projected. The shaded cone is the conditional p10–p90 band at the event's trigger level; the dark line is realised SPX since the signal.</p>
-  <div id="lastsig_head"></div>
-  <div id="lastsig_chart" style="height:380px"></div>
-  <div id="lastsig_table"></div>
+  <section class="panel active" data-panel="signal">
+    <h2>How to use this</h2>
+    <ul class="use">
+      <li><b>Read the number as conviction, not a trade.</b> A high score means breadth has thrust — many names participating in a turn up — not that today is an entry point. It sizes how much the tape confirms a risk-on turn.</li>
+      <li><b>Lean on the six-month median, not the headline win rate.</b> On this 2018–2026 sample the durable edge is the lift in six-month median return. The win-rate edge only clears the baseline noise band at the looser ≥1/≥2 thresholds (see the Forward-return study tab); the ≥3 win rate sits inside the band. Do not treat score ≥ 3 as a confirmed standalone trigger.</li>
+      <li><b>Respect entry discipline.</b> Thrusts are most useful deployed after flat or negative stretches, to avoid buying the peak of an already-strong run — not to chase one.</li>
+      <li><b>Combine, do not isolate.</b> This is the bullish mirror of the Equity Defense Dashboard. Use it to gauge risk-on conviction alongside your defensive signals, not as a lone timing model.</li>
+      <li><b>Mind the caveats.</b> Eight years is a thin sample (few fresh events); 111 of 715 former members are unfetchable and drop from history; pre-2018 is excluded. Treat conclusions as suggestive.</li>
+    </ul>
 
-  <h2>SPX with thrust events and conviction score</h2>
-  <div id="chart_price" style="height:360px"></div>
-  <div id="chart_score" style="height:150px"></div>
+    <h2>SPX with thrust events and conviction score</h2>
+    <div id="chart_price" style="height:360px"></div>
+    <div id="chart_score" style="height:150px"></div>
+  </section>
 
-  <h2>Forward SPX returns conditional on conviction — lift over baseline</h2>
-  <p class="sub" style="font-size:13px">Win rate and median return measured on fresh thrust-event days (signal lagged one day). <b>Lift</b> is conditional minus the bootstrap unconditional baseline. A bare win rate means nothing without this comparison.</p>
-  <div id="lift_table"></div>
-  <div id="verdict"></div>
+  <section class="panel" data-panel="latest">
+    <h2>Tracking the latest signal</h2>
+    <p class="sub" style="font-size:13px">How the most recent thrust has actually played out versus the range its historical analogues projected. The shaded cone is the conditional p10–p90 band at the event's trigger level; the dark line is realised SPX since the signal.</p>
+    <div id="lastsig_head"></div>
+    <div id="lastsig_chart" style="height:380px"></div>
+    <div id="lastsig_table"></div>
+  </section>
 
-  <h2>How the signal is formed</h2>
-  <div id="formation"></div>
+  <section class="panel" data-panel="study">
+    <h2>Forward SPX returns conditional on conviction — lift over baseline</h2>
+    <p class="sub" style="font-size:13px">Win rate and median return measured on fresh thrust-event days (signal lagged one day). <b>Lift</b> is conditional minus the bootstrap unconditional baseline. A bare win rate means nothing without this comparison.</p>
+    <div id="lift_table"></div>
+    <div id="verdict"></div>
+  </section>
 
-  <h2>Methodology</h2>
-  <div class="card" id="method"></div>
+  <section class="panel" data-panel="formed">
+    <h2>How the signal is formed</h2>
+    <div id="formation"></div>
+
+    <h2>Methodology</h2>
+    <div class="card" id="method"></div>
+  </section>
+
+  <section class="panel" data-panel="why">
+    <h2>Why four dimensions, not eight signals</h2>
+    <p>The canonical list of "eight breadth-thrust signals" is not eight independent facts. Several are different mathematical views of the <b>same</b> underlying data series, so summing all eight double-counts a single breadth move and overstates conviction. This engine keeps every signal's information but groups them by the data they actually come from — four independent measurement axes — and drops one signal that adds nothing but a fitted threshold.</p>
+
+    <table class="maptbl"><thead><tr><th>#</th><th>Canonical signal</th><th>Underlying series</th><th>Maps to</th></tr></thead><tbody>
+      <tr><td>1</td><td>Zweig Breadth Thrust</td><td>advance / decline</td><td class="d1">D1</td></tr>
+      <tr><td>2</td><td>McClellan Oscillator</td><td>advance / decline</td><td class="d1">D1</td></tr>
+      <tr><td>6</td><td>10-day A/D ratio (Deemer)</td><td>advance / decline</td><td class="d1">D1</td></tr>
+      <tr><td>7</td><td>McClellan Summation Index</td><td>advance / decline</td><td class="excl">excluded</td></tr>
+      <tr><td>3</td><td>% stocks &gt; 50-day MA</td><td>price vs MA</td><td class="keep">D2</td></tr>
+      <tr><td>4</td><td>NH / (NH + NL) ratio</td><td>new highs / lows</td><td class="keep">D3</td></tr>
+      <tr><td>8</td><td>Net new highs</td><td>new highs / lows</td><td class="keep">D3</td></tr>
+      <tr><td>5</td><td>Up-volume ratio</td><td>volume</td><td class="keep">D4</td></tr>
+    </tbody></table>
+
+    <h2>The double-counting problem</h2>
+    <p>Signals 1, 2, 6 and 7 are all functions of one daily series — the count of advancers versus decliners. The Summation Index (7) is literally the running cumulative sum of the McClellan Oscillator (2); it carries no information the Oscillator does not. So in a naive 0–8 sum, a single strong advance/decline surge can light up four of the eight boxes at once. "Six of eight firing" can be two or three underlying readings wearing six hats — which inflates the apparent corroboration, exactly what a conviction meter must not do.</p>
+
+    <h2>The grouping rule</h2>
+    <p><b>OR within a dimension, sum across dimensions.</b> Within a dimension the sub-conditions are OR-ed — they are alternative expressions of the same data, so they count <i>once</i>. Across dimensions the score is summed, because advance/decline, price-vs-MA, new-highs/lows and volume are genuinely independent ways for breadth to confirm a turn. That is what makes the 0–4 score honest: each point is a distinct piece of evidence, not the same evidence re-counted. Nothing is discarded — the engine still records each sub-condition (Zweig, McClellan, Deemer) individually; they simply do not get to vote four times.</p>
+
+    <h2>Why the Summation Index is dropped entirely</h2>
+    <p>Two reasons. First, <b>redundancy</b>: since it is a transform of the Oscillator, folding it into D1 would change nothing. Second, and decisively, its thrust condition ("cross above +500 from below 0") hinges on a <b>+500 level that is not canonical</b> the way Zweig's 0.40 → 0.615 is. That threshold depends on the breadth universe and regime, and would have to be calibrated from the very data we are testing on — in-sample overfitting. The rule here is explicit: better to exclude it than to fit a threshold to the data (re-introducing it would need an out-of-sample defence). The other seven thresholds are standard, published values, held frozen.</p>
+
+    <p class="tnote">Proxy note: the canonical table refers to NYSE breadth, but this engine computes advance/decline, new highs/lows, % above 50-day MA and up-volume from <b>S&amp;P 500 constituents</b> as a large-cap proxy. The two converge at the breadth extremes the thrust conditions care about and diverge in the middle, which we do not threshold on.</p>
+  </section>
 
   <p class="foot" id="foot"></p>
 </div>
@@ -393,6 +454,19 @@ function renderMethod(d) {
      <p style="color:var(--ink-faint);font-size:13px">Memory window: ${d.config.memory_days} trading days. Dimensions: D1 advance/decline (Zweig OR 10-day A/D OR McClellan), D2 % above 50-day MA, D3 new-high/new-low, D4 up-volume. Baseline bootstrapped with a moving-block resample to preserve forward-window autocorrelation.</p>`;
 }
 
+function initTabs() {
+  document.querySelectorAll(".tab").forEach(t => t.addEventListener("click", () => {
+    const name = t.dataset.tab;
+    document.querySelectorAll(".tab").forEach(x => x.classList.toggle("active", x === t));
+    document.querySelectorAll(".panel").forEach(p => p.classList.toggle("active", p.dataset.panel === name));
+    // Plotly charts sized while their tab was hidden render at zero width;
+    // resize them now that the panel is visible.
+    const panel = document.querySelector(`.panel[data-panel="${name}"]`);
+    panel.querySelectorAll(".js-plotly-plot").forEach(el => { try { Plotly.Plots.resize(el); } catch (e) {} });
+    window.scrollTo(0, 0);
+  }));
+}
+
 load().then(d => {
   renderBanner(d);
   renderScope(d);
@@ -403,6 +477,7 @@ load().then(d => {
   renderVerdict(d);
   renderFormation(d);
   renderMethod(d);
+  initTabs();
   document.getElementById("foot").innerHTML =
     "Generated " + (d.generated_utc || "—") + " · research artefact, not investment advice · single-source S&P 500 proxy breadth";
 }).catch(e => {

@@ -34,6 +34,27 @@
   .noise-ok { font-weight: 700; }
   .badge { display: inline-block; font-size: 10px; line-height: 1; padding: 2px 5px;
     border-radius: 4px; background: var(--on); color: #fff; margin-left: 4px; vertical-align: middle; }
+  .use { background: var(--card); border: 1px solid var(--line); border-radius: 12px; padding: 6px 20px; }
+  .use li { margin: 9px 0; }
+  .use b { color: var(--ink); }
+  .dim { border: 1px solid var(--line); border-radius: 10px; padding: 12px 16px; margin: 10px 0; background: #fff; }
+  .dim-on { border-color: #bfe3c8; background: #fbfefb; }
+  .dim-head { display: flex; align-items: center; gap: 8px; font-size: 15px; }
+  .dim-state { margin-left: auto; font-size: 11px; text-transform: uppercase; letter-spacing: .04em;
+    color: var(--muted); border: 1px solid var(--line); border-radius: 20px; padding: 2px 9px; }
+  .dim-on .dim-state { color: var(--on); border-color: #bfe3c8; }
+  .dim-why { color: var(--muted); font-size: 12.5px; margin: 5px 0 12px; }
+  .gauge { margin: 12px 0 14px; }
+  .glabel { font-size: 13px; display: flex; align-items: baseline; gap: 8px; }
+  .glabel .gv { margin-left: auto; font-weight: 700; font-variant-numeric: tabular-nums; }
+  .gtrack { position: relative; height: 12px; background: #eef1f4; border-radius: 6px; margin: 7px 0 4px; }
+  .gfill { position: absolute; left: 0; top: 0; height: 100%; background: #c9d8ec; border-radius: 6px 0 0 6px; }
+  .gfill-on { background: #9ed0ad; }
+  .gval { position: absolute; top: -2px; width: 2px; height: 16px; background: var(--ink); transform: translateX(-1px); }
+  .gm { position: absolute; top: 0; height: 12px; border-left: 1.5px dashed #9aa4ad; }
+  .gm-l { position: absolute; top: 13px; left: 0; transform: translateX(-50%);
+    font-size: 9.5px; color: var(--muted); white-space: nowrap; }
+  .ghint { color: var(--muted); font-size: 11.5px; margin-top: 16px; }
   .grid { display: grid; gap: 14px; }
   .status { display: grid; grid-template-columns: auto 1fr; gap: 22px; align-items: center;
     background: var(--card); border: 1px solid var(--line); border-radius: 12px; padding: 18px 22px; }
@@ -65,6 +86,15 @@
   <div id="scope"></div>
   <div id="status" class="status"></div>
 
+  <h2>How to use this</h2>
+  <ul class="use">
+    <li><b>Read the number as conviction, not a trade.</b> A high score means breadth has thrust — many names participating in a turn up — not that today is an entry point. It sizes how much the tape confirms a risk-on turn.</li>
+    <li><b>Lean on the six-month median, not the headline win rate.</b> On this 2018–2026 sample the durable edge is the lift in six-month median return. The win-rate edge only clears the baseline noise band at the looser ≥1/≥2 thresholds (see the lift table); the ≥3 win rate sits inside the band. Do not treat score ≥ 3 as a confirmed standalone trigger.</li>
+    <li><b>Respect entry discipline.</b> Thrusts are most useful deployed after flat or negative stretches, to avoid buying the peak of an already-strong run — not to chase one.</li>
+    <li><b>Combine, do not isolate.</b> This is the bullish mirror of the Equity Defense Dashboard. Use it to gauge risk-on conviction alongside your defensive signals, not as a lone timing model.</li>
+    <li><b>Mind the caveats.</b> Eight years is a thin sample (few fresh events); 111 of 715 former members are unfetchable and drop from history; pre-2018 is excluded. Treat conclusions as suggestive.</li>
+  </ul>
+
   <h2>SPX with thrust events and conviction score</h2>
   <div id="chart_price" style="height:360px"></div>
   <div id="chart_score" style="height:150px"></div>
@@ -73,6 +103,9 @@
   <p class="sub" style="font-size:13px">Win rate and median return measured on fresh thrust-event days (signal lagged one day). <b>Lift</b> is conditional minus the bootstrap unconditional baseline. A bare win rate means nothing without this comparison.</p>
   <div id="lift_table"></div>
   <div id="verdict"></div>
+
+  <h2>How the signal is formed</h2>
+  <div id="formation"></div>
 
   <h2>Methodology</h2>
   <div class="card" id="method"></div>
@@ -226,6 +259,38 @@ function renderVerdict(d) {
     `The win-rate lift also <i>falls</i> as conviction rises (strongest at ≥1/≥2, weakest at ≥3/≥4), the opposite of what a conviction meter should show — treat as suggestive, not a confirmed standalone ≥3 timing trigger.`;
 }
 
+function renderFormation(d) {
+  const f = d.formation;
+  if (!f || !f.dimensions) return;
+  const clamp = v => Math.max(0, Math.min(100, v));
+  let html =
+    `<p class="sub" style="font-size:13px">Each session, four independent breadth dimensions are checked for a thrust. ` +
+    `Within a dimension the sub-conditions share one data series, so they are OR-ed and count once; across dimensions the score is the number currently on (0–4). ` +
+    `A dimension that fires stays "on" for ${f.memory_days} trading days, so clustered thrusts read as sustained conviction. The bars below show where each live reading sits relative to its trigger.</p>`;
+  f.dimensions.forEach(dim => {
+    html += `<div class="dim ${dim.on ? "dim-on" : ""}">` +
+      `<div class="dim-head"><span class="dot ${dim.on ? "on" : ""}"></span><b>${dim.label}</b>` +
+      `<span class="dim-state">${dim.on ? "on" : "off"}</span></div>` +
+      `<div class="dim-why">${dim.why}</div>`;
+    dim.gauges.forEach(g => {
+      const span = (g.scale.max - g.scale.min) || 1;
+      const pos = g.value === null ? null : clamp((g.value - g.scale.min) / span * 100);
+      const markers = g.markers.map(m => {
+        const mp = clamp((m.at - g.scale.min) / span * 100);
+        return `<span class="gm" style="left:${mp}%"><span class="gm-l">${m.label}</span></span>`;
+      }).join("");
+      const fill = pos === null ? "" : `<span class="gfill ${g.fired ? "gfill-on" : ""}" style="width:${pos}%"></span>`;
+      const val = pos === null ? "" : `<span class="gval" style="left:${pos}%"></span>`;
+      html += `<div class="gauge"><div class="glabel">${g.label}` +
+        `${g.fired ? '<span class="badge">firing</span>' : ""}<span class="gv">${g.display}</span></div>` +
+        `<div class="gtrack">${fill}${markers}${val}</div>` +
+        `<div class="ghint">${g.hint}</div></div>`;
+    });
+    html += `</div>`;
+  });
+  document.getElementById("formation").innerHTML = html;
+}
+
 function renderMethod(d) {
   document.getElementById("method").innerHTML =
     `<p style="margin:6px 0">${d.config.note}</p>
@@ -239,6 +304,7 @@ load().then(d => {
   renderCharts(d);
   renderLift(d);
   renderVerdict(d);
+  renderFormation(d);
   renderMethod(d);
   document.getElementById("foot").textContent =
     "Generated " + (d.generated_utc || "—") + " · simulated study, not investment advice · single-source S&P 500 proxy breadth";

@@ -1,5 +1,5 @@
 {
-  "generated_utc": "2026-06-01T09:05:40.781849+00:00",
+  "generated_utc": "2026-06-01T09:30:26.467839+00:00",
   "survivorship_bias": false,
   "data_quality": {
     "ever_members": 715,
@@ -43,6 +43,182 @@
     },
     "data_ok": true,
     "valid_count": 503
+  },
+  "formation": {
+    "memory_days": 60,
+    "dimensions": [
+      {
+        "key": "d1",
+        "label": "Advance / Decline",
+        "on": false,
+        "why": "Zweig, the 10-day A/D ratio and the McClellan Oscillator all derive from one advance/decline series, so they are OR-ed and counted once.",
+        "gauges": [
+          {
+            "label": "Zweig EMA(10) of advancers' share",
+            "value": 0.4978739291287525,
+            "display": "50%",
+            "scale": {
+              "min": 0,
+              "max": 1
+            },
+            "markers": [
+              {
+                "at": 0.4,
+                "label": "0.40"
+              },
+              {
+                "at": 0.615,
+                "label": "0.615 trigger"
+              }
+            ],
+            "fired": false,
+            "hint": "Thrust: compress below 0.40, then cross above 0.615 within 10 sessions."
+          },
+          {
+            "label": "10-day cumulative A/D ratio",
+            "value": 1.0740894039735098,
+            "display": "1.07",
+            "scale": {
+              "min": 0,
+              "max": 3
+            },
+            "markers": [
+              {
+                "at": 1.9,
+                "label": "1.90 trigger"
+              }
+            ],
+            "fired": false,
+            "hint": "Deemer breakaway momentum: above 1.90."
+          },
+          {
+            "label": "McClellan Oscillator",
+            "value": -1.590764214435823,
+            "display": "-2",
+            "scale": {
+              "min": -150,
+              "max": 150
+            },
+            "markers": [
+              {
+                "at": -50,
+                "label": "\u221250"
+              },
+              {
+                "at": 0,
+                "label": "0 trigger"
+              }
+            ],
+            "fired": false,
+            "hint": "Thrust: dip below \u221250, then recross 0 within 20 sessions."
+          }
+        ]
+      },
+      {
+        "key": "d2",
+        "label": "% above 50-day MA",
+        "on": false,
+        "why": "Share of members trading above their own 50-day moving average.",
+        "gauges": [
+          {
+            "label": "% of members above 50-day MA",
+            "value": 0.5443548387096774,
+            "display": "54%",
+            "scale": {
+              "min": 0,
+              "max": 1
+            },
+            "markers": [
+              {
+                "at": 0.25,
+                "label": "25%"
+              },
+              {
+                "at": 0.75,
+                "label": "75% trigger"
+              }
+            ],
+            "fired": false,
+            "hint": "Thrust: surge from below 25% to above 75% within 15 sessions."
+          }
+        ]
+      },
+      {
+        "key": "d3",
+        "label": "New highs / new lows",
+        "on": true,
+        "why": "52-week new highs versus new lows, in two expressions that are OR-ed.",
+        "gauges": [
+          {
+            "label": "New highs / (highs + lows)",
+            "value": 0.6285714285714286,
+            "display": "63%",
+            "scale": {
+              "min": 0,
+              "max": 1
+            },
+            "markers": [
+              {
+                "at": 0.1,
+                "label": "10%"
+              },
+              {
+                "at": 0.5,
+                "label": "50% trigger"
+              }
+            ],
+            "fired": false,
+            "hint": "Thrust: surge from below 10% to above 50% within 10 sessions."
+          },
+          {
+            "label": "Net new highs (highs \u2212 lows)",
+            "value": 9.0,
+            "display": "9",
+            "scale": {
+              "min": -100,
+              "max": 100
+            },
+            "markers": [
+              {
+                "at": 0,
+                "label": "0"
+              },
+              {
+                "at": 20,
+                "label": "+20 trigger"
+              }
+            ],
+            "fired": false,
+            "hint": "Thrust: rise from negative to above +20 within 10 sessions."
+          }
+        ]
+      },
+      {
+        "key": "d4",
+        "label": "Up-volume",
+        "on": false,
+        "why": "Volume of advancing names as a share of total (raw, unadjusted volume).",
+        "gauges": [
+          {
+            "label": "Up-volume ratio (best of trailing 5)",
+            "value": 0.6415514784034463,
+            "display": "64%",
+            "scale": {
+              "min": 0,
+              "max": 1
+            },
+            "markers": [
+              {
+                "at": 0.9,
+                "label": "0.90 trigger"
+              }
+            ],
+            "fired": false,
+            "hint": "Thrust: above 0.90 on any of the last 5 sessions."
+          }
+        ]
+      }
+    ]
   },
   "study": {
     "window": {

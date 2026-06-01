@@ -344,3 +344,50 @@ def compute_composite(
     df["data_ok"] = panels.valid_count >= MIN_VALID_CONSTITUENTS
 
     return df
+
+
+def latest_readings(panels: BreadthPanels) -> dict:
+    """Current values of the raw breadth lines the D1-D4 detectors threshold.
+
+    For the dashboard's "how the signal is formed" view. Mirrors the formulas in
+    the detectors above and uses the SAME canonical constants, so a span/window
+    change there flows through here. Display only — the signal itself comes from
+    the detector booleans, never from these scalars.
+    """
+    adv, dec = panels.advances, panels.declines
+    ad_ratio_daily = adv / (adv + dec).replace(0, np.nan)
+    zweig_line = ad_ratio_daily.ewm(span=ZWEIG_WINDOW, adjust=False).mean()
+
+    cum_adv = adv.rolling(AD_RATIO_WINDOW, min_periods=AD_RATIO_WINDOW).sum()
+    cum_dec = dec.rolling(AD_RATIO_WINDOW, min_periods=AD_RATIO_WINDOW).sum()
+    ad_ratio_10d = cum_adv / cum_dec.replace(0, np.nan)
+
+    net = adv - dec
+    mcc = (
+        net.ewm(span=MCC_FAST, adjust=False).mean()
+        - net.ewm(span=MCC_SLOW, adjust=False).mean()
+    )
+
+    nh, nl = panels.new_highs, panels.new_lows
+    nhnl_ratio = nh / (nh + nl).replace(0, np.nan)
+    net_nh = nh - nl
+
+    upvol_trailing_max = panels.up_volume_ratio.rolling(
+        UPVOL_TRAILING, min_periods=1
+    ).max()
+
+    def last(s):
+        v = s.iloc[-1] if len(s) else np.nan
+        return None if v != v else float(v)
+
+    return {
+        "advance_ratio": last(ad_ratio_daily),
+        "zweig_ema": last(zweig_line),
+        "ad_ratio_10d": last(ad_ratio_10d),
+        "mcclellan_osc": last(mcc),
+        "pct_above_50dma": last(panels.pct_above_50dma),
+        "nhnl_ratio": last(nhnl_ratio),
+        "net_new_highs": last(net_nh),
+        "up_volume_ratio": last(panels.up_volume_ratio),
+        "up_volume_trailing5_max": last(upvol_trailing_max),
+    }

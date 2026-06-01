@@ -167,7 +167,95 @@ def timeline(composite: pd.DataFrame, spx: pd.Series) -> dict:
     }
 
 
-def build_payload(composite, spx, survivorship_bias, data_quality=None) -> dict:
+def formation_block(composite: pd.DataFrame, panels) -> dict:
+    """Live per-dimension breakdown for the dashboard's "how it is formed" view.
+
+    For each of the four dimensions: whether it is currently on (within the
+    memory window), why its sub-conditions are grouped, and a gauge per raw
+    reading showing where it sits relative to its canonical trigger(s). Reading
+    values come from cb.latest_readings; sub-condition fire states and the
+    dimension on-state come from the composite's last row.
+    """
+    r = cb.latest_readings(panels)
+    last = composite.iloc[-1]
+
+    def pct(x):
+        return "—" if x is None else f"{x * 100:.0f}%"
+
+    def num(x, d=2):
+        return "—" if x is None else f"{x:.{d}f}"
+
+    def gauge(label, value, scale_min, scale_max, markers, fired, display, hint):
+        return {
+            "label": label,
+            "value": value,
+            "display": display,
+            "scale": {"min": scale_min, "max": scale_max},
+            "markers": markers,
+            "fired": bool(fired),
+            "hint": hint,
+        }
+
+    dims = [
+        {
+            "key": "d1", "label": "Advance / Decline", "on": bool(last["d1_on"]),
+            "why": ("Zweig, the 10-day A/D ratio and the McClellan Oscillator all "
+                    "derive from one advance/decline series, so they are OR-ed and "
+                    "counted once."),
+            "gauges": [
+                gauge("Zweig EMA(10) of advancers' share", r["zweig_ema"], 0, 1,
+                      [{"at": 0.40, "label": "0.40"}, {"at": 0.615, "label": "0.615 trigger"}],
+                      last["zweig"], pct(r["zweig_ema"]),
+                      "Thrust: compress below 0.40, then cross above 0.615 within 10 sessions."),
+                gauge("10-day cumulative A/D ratio", r["ad_ratio_10d"], 0, 3,
+                      [{"at": 1.90, "label": "1.90 trigger"}],
+                      last["ad_ratio_deemer"], num(r["ad_ratio_10d"]),
+                      "Deemer breakaway momentum: above 1.90."),
+                gauge("McClellan Oscillator", r["mcclellan_osc"], -150, 150,
+                      [{"at": -50, "label": "−50"}, {"at": 0, "label": "0 trigger"}],
+                      last["mcclellan"], num(r["mcclellan_osc"], 0),
+                      "Thrust: dip below −50, then recross 0 within 20 sessions."),
+            ],
+        },
+        {
+            "key": "d2", "label": "% above 50-day MA", "on": bool(last["d2_on"]),
+            "why": "Share of members trading above their own 50-day moving average.",
+            "gauges": [
+                gauge("% of members above 50-day MA", r["pct_above_50dma"], 0, 1,
+                      [{"at": 0.25, "label": "25%"}, {"at": 0.75, "label": "75% trigger"}],
+                      last["pct_above_50dma"], pct(r["pct_above_50dma"]),
+                      "Thrust: surge from below 25% to above 75% within 15 sessions."),
+            ],
+        },
+        {
+            "key": "d3", "label": "New highs / new lows", "on": bool(last["d3_on"]),
+            "why": "52-week new highs versus new lows, in two expressions that are OR-ed.",
+            "gauges": [
+                gauge("New highs / (highs + lows)", r["nhnl_ratio"], 0, 1,
+                      [{"at": 0.10, "label": "10%"}, {"at": 0.50, "label": "50% trigger"}],
+                      last["nhnl_ratio"], pct(r["nhnl_ratio"]),
+                      "Thrust: surge from below 10% to above 50% within 10 sessions."),
+                gauge("Net new highs (highs − lows)", r["net_new_highs"], -100, 100,
+                      [{"at": 0, "label": "0"}, {"at": 20, "label": "+20 trigger"}],
+                      last["net_new_highs"], num(r["net_new_highs"], 0),
+                      "Thrust: rise from negative to above +20 within 10 sessions."),
+            ],
+        },
+        {
+            "key": "d4", "label": "Up-volume", "on": bool(last["d4_on"]),
+            "why": "Volume of advancing names as a share of total (raw, unadjusted volume).",
+            "gauges": [
+                gauge("Up-volume ratio (best of trailing 5)", r["up_volume_trailing5_max"], 0, 1,
+                      [{"at": 0.90, "label": "0.90 trigger"}],
+                      last["up_volume"], pct(r["up_volume_trailing5_max"]),
+                      "Thrust: above 0.90 on any of the last 5 sessions."),
+            ],
+        },
+    ]
+    return {"memory_days": cb.DEFAULT_MEMORY_DAYS, "dimensions": dims}
+
+
+def build_payload(composite, spx, survivorship_bias, data_quality=None, panels=None) -> dict:
     return {
         "generated_utc": datetime.now(timezone.utc).isoformat(),
         "survivorship_bias": survivorship_bias,
@@ -183,6 +271,7 @@ def build_payload(composite, spx, survivorship_bias, data_quality=None) -> dict:
             ),
         },
         "current": current_status(composite),
+        "formation": formation_block(composite, panels) if panels is not None else {},
         "study": run_study(composite, spx),
         "timeline": timeline(composite, spx),
     }
@@ -226,7 +315,7 @@ def synthetic_run() -> dict:
     panels = cb.build_panels(adj, vol)
     comp = cb.compute_composite(panels)
     spx = adj.mean(axis=1)
-    payload = build_payload(comp, spx, survivorship_bias=True)
+    payload = build_payload(comp, spx, survivorship_bias=True, panels=panels)
     return payload
 
 
@@ -305,7 +394,7 @@ def main() -> int:
     if thin:
         log.warning("%d trading days have < %d valid constituents.", thin, cb.MIN_VALID_CONSTITUENTS)
 
-    payload = build_payload(comp, spx.reindex(comp.index), survivorship, data_quality)
+    payload = build_payload(comp, spx.reindex(comp.index), survivorship, data_quality, panels)
     render(payload)
     c = payload["current"]
     log.info("Done — as of %s, %d/4 dimensions on (score %.1f)", c["as_of"], c["n_dimensions"], c["score"])

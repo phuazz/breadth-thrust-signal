@@ -106,19 +106,11 @@
   .foot { color: var(--ink-faint); font-size: 12.5px; margin-top: 40px; padding-top: 16px; border-top: 1px solid var(--border); }
   .empty { color: var(--ink-faint); font-style: italic; padding: 22px 0; }
 
-  /* Tabs */
-  .tabs { display: flex; flex-wrap: wrap; gap: 2px; border-bottom: 1px solid var(--border);
-    margin: 24px 0 22px; position: sticky; top: 0; background: var(--bg); z-index: 5; }
-  .tab { appearance: none; background: none; border: none; border-bottom: 2px solid transparent;
-    padding: 11px 16px; font: inherit; font-size: 14px; font-weight: 500; color: var(--ink-faint);
-    cursor: pointer; margin-bottom: -1px; white-space: nowrap; }
-  .tab:hover { color: var(--ink); }
-  .tab.active { color: var(--accent); border-bottom-color: var(--accent); font-weight: 600; }
-  .panel { display: none; }
-  .panel.active { display: block; }
-  .panel > h2:first-child { margin-top: 6px; }
+  /* Single-page sections (formerly tab panels) */
+  .panel { display: block; }
+  .panel + .panel { border-top: 1px solid var(--border); margin-top: 8px; }
 
-  /* Mapping table for the "Why 4, not 8" tab */
+  /* Mapping table for the "Why four, not eight" section */
   .maptbl td:nth-child(3), .maptbl th:nth-child(3) { text-align: left; }
   .maptbl .d1 { color: var(--accent); font-weight: 600; }
   .maptbl .excl { color: var(--bad); font-weight: 600; }
@@ -134,19 +126,11 @@
   <div id="scope"></div>
   <div id="status" class="hero"></div>
 
-  <nav class="tabs" id="tabs">
-    <button class="tab active" data-tab="signal">Signal</button>
-    <button class="tab" data-tab="latest">Latest signal</button>
-    <button class="tab" data-tab="study">Forward-return study</button>
-    <button class="tab" data-tab="formed">How it is formed</button>
-    <button class="tab" data-tab="why">Why 4, not 8</button>
-  </nav>
-
-  <section class="panel active" data-panel="signal">
+  <section class="panel" data-panel="signal">
     <h2>How to use this</h2>
     <ul class="use">
       <li><b>Read the number as conviction, not a trade.</b> A high score means breadth has thrust — many names participating in a turn up — not that today is an entry point. It sizes how much the tape confirms a risk-on turn.</li>
-      <li><b>Lean on the six-month median, not the headline win rate.</b> On this 2018–2026 sample the durable edge is the lift in six-month median return. The win-rate edge only clears the baseline noise band at the looser ≥1/≥2 thresholds (see the Forward-return study tab); the ≥3 win rate sits inside the band. Do not treat score ≥ 3 as a confirmed standalone trigger.</li>
+      <li><b>Lean on the six-month median, not the headline win rate.</b> On this 2018–2026 sample the durable edge is the lift in six-month median return. The win-rate edge only clears the baseline noise band at the looser ≥1/≥2 thresholds (see the forward-return study below); the ≥3 win rate sits inside the band. Do not treat score ≥ 3 as a confirmed standalone trigger.</li>
       <li><b>Respect entry discipline.</b> Thrusts are most useful deployed after flat or negative stretches, to avoid buying the peak of an already-strong run — not to chase one.</li>
       <li><b>Combine, do not isolate.</b> This is the bullish mirror of the Equity Defense Dashboard. Use it to gauge risk-on conviction alongside your defensive signals, not as a lone timing model.</li>
       <li><b>Mind the caveats.</b> Eight years is a thin sample (few fresh events); 111 of 715 former members are unfetchable and drop from history; pre-2018 is excluded. Treat conclusions as suggestive.</li>
@@ -496,19 +480,6 @@ function renderMethod(d) {
      <p style="color:var(--ink-faint);font-size:13px">Memory window: ${d.config.memory_days} trading days. Dimensions: D1 advance/decline (Zweig OR 10-day A/D OR McClellan), D2 % above 50-day MA, D3 new-high/new-low, D4 up-volume. Baseline bootstrapped with a moving-block resample to preserve forward-window autocorrelation.</p>`;
 }
 
-function initTabs() {
-  document.querySelectorAll(".tab").forEach(t => t.addEventListener("click", () => {
-    const name = t.dataset.tab;
-    document.querySelectorAll(".tab").forEach(x => x.classList.toggle("active", x === t));
-    document.querySelectorAll(".panel").forEach(p => p.classList.toggle("active", p.dataset.panel === name));
-    // Plotly charts sized while their tab was hidden render at zero width;
-    // resize them now that the panel is visible.
-    const panel = document.querySelector(`.panel[data-panel="${name}"]`);
-    panel.querySelectorAll(".js-plotly-plot").forEach(el => { try { Plotly.Plots.resize(el); } catch (e) {} });
-    window.scrollTo(0, 0);
-  }));
-}
-
 load().then(d => {
   renderBanner(d);
   renderScope(d);
@@ -519,7 +490,6 @@ load().then(d => {
   renderVerdict(d);
   renderFormation(d);
   renderMethod(d);
-  initTabs();
   document.getElementById("foot").innerHTML =
     "Generated " + (d.generated_utc || "—") + " · research artefact, not investment advice · single-source S&P 500 proxy breadth";
 }).catch(e => {

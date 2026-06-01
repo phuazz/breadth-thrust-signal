@@ -1,0 +1,193 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Breadth-Thrust Signal — Risk-On Conviction Meter</title>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/plotly.js/2.27.0/plotly.min.js"></script>
+<style>
+  :root {
+    --bg: #ffffff; --ink: #1a1a1a; --muted: #5c6670; --line: #e3e7eb;
+    --card: #f7f9fb; --accent: #1f6feb; --on: #137333; --off: #c4c9ce;
+    --warn-bg: #fff4e5; --warn-ink: #8a5300; --warn-line: #f0c27a;
+  }
+  * { box-sizing: border-box; }
+  body {
+    margin: 0; background: var(--bg); color: var(--ink);
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+    line-height: 1.55; font-size: 15px;
+  }
+  .wrap { max-width: 1080px; margin: 0 auto; padding: 28px 22px 64px; }
+  h1 { font-size: 24px; margin: 0 0 2px; letter-spacing: -0.01em; }
+  h2 { font-size: 17px; margin: 34px 0 10px; }
+  .sub { color: var(--muted); margin: 0 0 18px; }
+  .banner {
+    background: var(--warn-bg); color: var(--warn-ink); border: 1px solid var(--warn-line);
+    border-radius: 8px; padding: 11px 14px; margin: 0 0 20px; font-size: 13.5px;
+  }
+  .grid { display: grid; gap: 14px; }
+  .status { display: grid; grid-template-columns: auto 1fr; gap: 22px; align-items: center;
+    background: var(--card); border: 1px solid var(--line); border-radius: 12px; padding: 18px 22px; }
+  .score { text-align: center; }
+  .score .big { font-size: 46px; font-weight: 700; line-height: 1; }
+  .score .of { color: var(--muted); font-size: 13px; }
+  .chips { display: flex; flex-wrap: wrap; gap: 8px; }
+  .chip { display: flex; align-items: center; gap: 7px; border: 1px solid var(--line);
+    border-radius: 20px; padding: 5px 12px; font-size: 13px; background: #fff; }
+  .dot { width: 9px; height: 9px; border-radius: 50%; background: var(--off); }
+  .dot.on { background: var(--on); }
+  table { border-collapse: collapse; width: 100%; font-size: 13.5px; }
+  th, td { text-align: right; padding: 7px 10px; border-bottom: 1px solid var(--line); }
+  th:first-child, td:first-child { text-align: left; }
+  thead th { color: var(--muted); font-weight: 600; border-bottom: 2px solid var(--line); }
+  .pos { color: var(--on); } .neg { color: #b3261e; }
+  .lift-hi { background: #e6f4ea; } .lift-mid { background: #f4f9f5; }
+  .card { background: var(--card); border: 1px solid var(--line); border-radius: 12px; padding: 8px 12px; }
+  .foot { color: var(--muted); font-size: 12px; margin-top: 30px; }
+  code { background: #eef1f4; padding: 1px 5px; border-radius: 4px; font-size: 12.5px; }
+  .empty { color: var(--muted); font-style: italic; padding: 20px 0; }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <h1>Breadth-Thrust Signal</h1>
+  <p class="sub">Risk-on conviction meter — the bullish mirror of the Equity Defense Dashboard. Grouped four-dimension breadth score, with a conditional forward-return study versus a bootstrap baseline.</p>
+  <div id="banner"></div>
+  <div id="status" class="status"></div>
+
+  <h2>SPX with thrust events and conviction score</h2>
+  <div id="chart_price" style="height:360px"></div>
+  <div id="chart_score" style="height:150px"></div>
+
+  <h2>Forward SPX returns conditional on conviction — lift over baseline</h2>
+  <p class="sub" style="font-size:13px">Win rate and median return measured on fresh thrust-event days (signal lagged one day). <b>Lift</b> is conditional minus the bootstrap unconditional baseline. A bare win rate means nothing without this comparison.</p>
+  <div id="lift_table"></div>
+
+  <h2>Methodology</h2>
+  <div class="card" id="method"></div>
+
+  <p class="foot" id="foot"></p>
+</div>
+
+<script type="application/json" id="signals-data">__SIGNALS_JSON__</script>
+<script>
+function load() {
+  // pipeline.py replaces the token in the data island above with JSON. For
+  // standalone dev (npx serve .) the token stays put, so fall back to fetch.
+  const raw = document.getElementById("signals-data").textContent.trim();
+  if (raw === "__SIGNALS_JSON__" || raw === "") {
+    return fetch("data/signals.json").then(r => r.json());
+  }
+  return Promise.resolve(JSON.parse(raw));
+}
+
+const pct = x => (x === null || x === undefined || isNaN(x)) ? "—" : (x * 100).toFixed(1) + "%";
+const signed = x => (x === null || x === undefined || isNaN(x)) ? "—" : (x >= 0 ? "+" : "") + (x * 100).toFixed(1) + "%";
+
+function renderBanner(d) {
+  if (d.survivorship_bias) {
+    document.getElementById("banner").className = "banner";
+    document.getElementById("banner").innerHTML =
+      "<b>Survivorship-biased universe.</b> No point-in-time membership snapshot was found, so breadth is computed on a static current-member list. Forward returns will look cleaner than reality. Supply <code>data/constituents_csp1.json</code> for a publishable result.";
+  }
+}
+
+function renderStatus(d) {
+  const c = d.current;
+  const chips = Object.values(c.dimensions).map(x =>
+    `<div class="chip"><span class="dot ${x.on ? "on" : ""}"></span>${x.label}</div>`).join("");
+  document.getElementById("status").innerHTML =
+    `<div class="score"><div class="big">${c.n_dimensions}</div><div class="of">of 4 dimensions</div></div>
+     <div><div style="font-size:13px;color:var(--muted);margin-bottom:8px">As of ${c.as_of}${c.data_ok ? "" : " — thin breadth data, treat with caution"}</div>
+     <div class="chips">${chips}</div></div>`;
+}
+
+function renderCharts(d) {
+  const t = d.timeline;
+  const evIdx = t.event.map((e, i) => e ? i : -1).filter(i => i >= 0);
+  const price = {
+    x: t.dates, y: t.spx, type: "scatter", mode: "lines",
+    line: { color: "#1a1a1a", width: 1.2 }, name: "SPX", hovertemplate: "%{x}<br>%{y}<extra></extra>"
+  };
+  const events = {
+    x: evIdx.map(i => t.dates[i]), y: evIdx.map(i => t.spx[i]),
+    type: "scatter", mode: "markers", name: "thrust event",
+    marker: { color: "#1f6feb", size: 7, symbol: "triangle-up" },
+    hovertemplate: "%{x}<br>thrust event<extra></extra>"
+  };
+  Plotly.newPlot("chart_price", [price, events], {
+    margin: { l: 48, r: 12, t: 8, b: 24 }, showlegend: true,
+    legend: { orientation: "h", y: 1.12 }, yaxis: { gridcolor: "#eef1f4" },
+    xaxis: { gridcolor: "#eef1f4" }, paper_bgcolor: "#fff", plot_bgcolor: "#fff"
+  }, { displayModeBar: false, responsive: true });
+
+  const score = {
+    x: t.dates, y: t.n_dimensions, type: "scatter", mode: "lines", fill: "tozeroy",
+    line: { color: "#1f6feb", width: 0.8 }, fillcolor: "rgba(31,111,235,0.18)",
+    name: "score", hovertemplate: "%{x}<br>%{y} of 4<extra></extra>"
+  };
+  Plotly.newPlot("chart_score", [score], {
+    margin: { l: 48, r: 12, t: 6, b: 24 }, showlegend: false,
+    yaxis: { range: [0, 4.2], dtick: 1, gridcolor: "#eef1f4", title: { text: "dimensions on", font: { size: 11 } } },
+    xaxis: { gridcolor: "#eef1f4" }, paper_bgcolor: "#fff", plot_bgcolor: "#fff"
+  }, { displayModeBar: false, responsive: true });
+}
+
+function renderLift(d) {
+  const horizons = ["1w", "1m", "3m", "6m", "12m"];
+  const rows = d.study.lift;
+  const byThr = {};
+  rows.forEach(r => { (byThr[r.threshold] = byThr[r.threshold] || {})[r.horizon] = r; });
+  const base = {};
+  d.study.baseline.forEach(b => base[b.horizon] = b);
+
+  let html = "<table><thead><tr><th>Conviction</th><th>Stat</th>" +
+    horizons.map(h => `<th>${h}</th>`).join("") + "</tr></thead><tbody>";
+  // baseline row
+  html += `<tr><td>Baseline (any day)</td><td>win / median</td>` +
+    horizons.map(h => base[h] ? `<td>${pct(base[h].base_win_rate)}<br><span style="color:var(--muted)">${signed(base[h].base_median_ret)}</span></td>` : "<td>—</td>").join("") + "</tr>";
+  [1, 2, 3, 4].forEach(thr => {
+    const r0 = byThr[thr] || {};
+    const n = horizons.map(h => r0[h] ? r0[h].n : 0).reduce((a, b) => Math.max(a, b), 0);
+    html += `<tr><td>Score ≥ ${thr} <span style="color:var(--muted)">(n=${n})</span></td><td>win (lift)</td>` +
+      horizons.map(h => {
+        const r = r0[h];
+        if (!r || r.n === 0) return "<td>—</td>";
+        const lift = r.win_lift;
+        const cls = lift > 0.1 ? "lift-hi" : (lift > 0 ? "lift-mid" : "");
+        const lc = lift >= 0 ? "pos" : "neg";
+        return `<td class="${cls}">${pct(r.win_rate)}<br><span class="${lc}">${signed(lift)}</span></td>`;
+      }).join("") + "</tr>";
+    html += `<tr><td></td><td style="color:var(--muted)">median (lift)</td>` +
+      horizons.map(h => {
+        const r = r0[h];
+        if (!r || r.n === 0) return "<td>—</td>";
+        const lc = r.ret_lift >= 0 ? "pos" : "neg";
+        return `<td>${signed(r.median_ret)}<br><span class="${lc}">${signed(r.ret_lift)}</span></td>`;
+      }).join("") + "</tr>";
+  });
+  html += "</tbody></table>";
+  document.getElementById("lift_table").innerHTML = html;
+}
+
+function renderMethod(d) {
+  document.getElementById("method").innerHTML =
+    `<p style="margin:6px 0">${d.config.note}</p>
+     <p style="margin:6px 0;color:var(--muted)">Memory window: ${d.config.memory_days} trading days. Dimensions: D1 advance/decline (Zweig OR 10-day A/D OR McClellan), D2 % above 50-day MA, D3 new-high/new-low, D4 up-volume. Baseline bootstrapped with a moving-block resample to preserve forward-window autocorrelation.</p>`;
+}
+
+load().then(d => {
+  renderBanner(d);
+  renderStatus(d);
+  renderCharts(d);
+  renderLift(d);
+  renderMethod(d);
+  document.getElementById("foot").textContent =
+    "Generated " + (d.generated_utc || "—") + " · simulated study, not investment advice · single-source S&P 500 proxy breadth";
+}).catch(e => {
+  document.getElementById("status").innerHTML =
+    `<div class="empty">No data yet. Run <code>python scripts/pipeline.py</code> (or <code>--self-test</code>) to populate, then reload.</div>`;
+});
+</script>
+</body>
+</html>

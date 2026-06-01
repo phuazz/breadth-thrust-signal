@@ -153,8 +153,9 @@
     </ul>
 
     <h2>SPX with thrust events and conviction score</h2>
+    <p class="sub" style="font-size:13px">Markers are sized and coloured by conviction: faint grey for minor thrusts (score 1–2), <span style="color:#1d7a3a;font-weight:600">green</span> for high-conviction score 3, and a larger <span style="color:#0c5e2c;font-weight:600">green star</span> for the rare score 4. The dashed line on the lower panel marks the score ≥ 3 high-conviction threshold.</p>
     <div id="chart_price" style="height:360px"></div>
-    <div id="chart_score" style="height:150px"></div>
+    <div id="chart_score" style="height:160px"></div>
   </section>
 
   <section class="panel" data-panel="latest">
@@ -355,12 +356,23 @@ function renderCharts(d) {
   const t = d.timeline;
   const evIdx = t.event.map((e, i) => e ? i : -1).filter(i => i >= 0);
   const price = { x: t.dates, y: t.spx, type: "scatter", mode: "lines", line: { color: "#111418", width: 1.3 }, name: "SPX", hovertemplate: "%{x}<br>%{y}<extra></extra>" };
-  const events = {
-    x: evIdx.map(i => t.dates[i]), y: evIdx.map(i => t.spx[i]), type: "scatter", mode: "markers",
-    name: "thrust event", marker: { color: "#1351b4", size: 8, symbol: "triangle-up" },
-    hovertemplate: "%{x}<br>thrust event<extra></extra>"
-  };
-  Plotly.newPlot("chart_price", [price, events], {
+  // Encode conviction into the markers: mute the minor (score 1–2) thrusts and
+  // make the high-conviction ones prominent and green, with the rare score-4
+  // events unmistakable (larger star). Score is the dimension count at the event.
+  const evTrace = (name, idxs, color, size, symbol) => ({
+    x: idxs.map(i => t.dates[i]), y: idxs.map(i => t.spx[i]),
+    type: "scatter", mode: "markers", name: name,
+    marker: { color: color, size: size, symbol: symbol, line: { color: "#fff", width: 1.2 } },
+    hovertemplate: "%{x}<br>" + name + "<extra></extra>"
+  });
+  const ev12 = evIdx.filter(i => t.n_dimensions[i] <= 2);
+  const ev3 = evIdx.filter(i => t.n_dimensions[i] === 3);
+  const ev4 = evIdx.filter(i => t.n_dimensions[i] >= 4);
+  const traces = [price];
+  if (ev12.length) traces.push(evTrace("thrust · score 1–2", ev12, "#9aa7b8", 7, "triangle-up"));
+  if (ev3.length) traces.push(evTrace("thrust · score 3", ev3, "#1d7a3a", 12, "triangle-up"));
+  if (ev4.length) traces.push(evTrace("thrust · score 4", ev4, "#0c5e2c", 17, "star"));
+  Plotly.newPlot("chart_price", traces, {
     margin: { l: 58, r: 14, t: 8, b: 28 }, font: PLOT_FONT, showlegend: true,
     legend: { orientation: "h", y: 1.14, font: PLOT_FONT },
     yaxis: ax({
@@ -380,7 +392,15 @@ function renderCharts(d) {
   Plotly.newPlot("chart_score", [score], {
     margin: { l: 58, r: 14, t: 6, b: 28 }, font: PLOT_FONT, showlegend: false,
     yaxis: ax({ type: "linear", range: [0, 4.2], dtick: 1, title: { text: "dimensions on", font: PLOT_FONT } }),
-    xaxis: ax({ type: "date" }), paper_bgcolor: "#fff", plot_bgcolor: "#fff"
+    xaxis: ax({ type: "date" }), paper_bgcolor: "#fff", plot_bgcolor: "#fff",
+    shapes: [{
+      type: "line", xref: "paper", x0: 0, x1: 1, yref: "y", y0: 3, y1: 3,
+      line: { color: "#1d7a3a", width: 1.2, dash: "dash" }
+    }],
+    annotations: [{
+      xref: "paper", x: 0.004, y: 3, yanchor: "bottom", showarrow: false,
+      text: "high-conviction ≥ 3", font: { family: "Inter, sans-serif", size: 10, color: "#1d7a3a" }
+    }]
   }, { displayModeBar: false, responsive: true });
 }
 

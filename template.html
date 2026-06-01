@@ -4,87 +4,117 @@
 <meta charset="utf-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1" />
 <title>Breadth-Thrust Signal — Risk-On Conviction Meter</title>
-<script src="https://cdnjs.cloudflare.com/ajax/libs/plotly.js/2.27.0/plotly.min.js"></script>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+<script src="https://cdn.plot.ly/plotly-2.35.2.min.js"></script>
 <style>
   :root {
-    --bg: #ffffff; --ink: #1a1a1a; --muted: #5c6670; --line: #e3e7eb;
-    --card: #f7f9fb; --accent: #1f6feb; --on: #137333; --off: #c4c9ce;
-    --warn-bg: #fff4e5; --warn-ink: #8a5300; --warn-line: #f0c27a;
-    --info-bg: #eef4fb; --info-ink: #23415e; --info-line: #cdddf0;
+    --ink: #111418; --ink-soft: #3f464e; --ink-faint: #6b727a;
+    --bg: #ffffff; --bg-soft: #f7f8fa; --bg-card: #ffffff;
+    --border: #e3e6ea; --border-strong: #c8ccd2;
+    --accent: #1351b4; --accent-soft: rgba(19,81,180,0.08);
+    --good: #1d7a3a; --good-soft: rgba(29,122,58,0.10);
+    --bad: #b3261e; --bad-soft: rgba(179,38,30,0.07);
+    --warn: #b76e00;
   }
   * { box-sizing: border-box; }
-  body {
-    margin: 0; background: var(--bg); color: var(--ink);
-    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
-    line-height: 1.55; font-size: 15px;
+  html, body {
+    margin: 0; padding: 0; background: var(--bg); color: var(--ink);
+    font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+    line-height: 1.6; font-size: 15.5px; -webkit-font-smoothing: antialiased;
+    text-rendering: optimizeLegibility;
   }
-  .wrap { max-width: 1080px; margin: 0 auto; padding: 28px 22px 64px; }
-  h1 { font-size: 24px; margin: 0 0 2px; letter-spacing: -0.01em; }
-  h2 { font-size: 17px; margin: 34px 0 10px; }
-  .sub { color: var(--muted); margin: 0 0 18px; }
-  .banner {
-    background: var(--warn-bg); color: var(--warn-ink); border: 1px solid var(--warn-line);
-    border-radius: 8px; padding: 11px 14px; margin: 0 0 20px; font-size: 13.5px;
-  }
-  .info {
-    background: var(--info-bg); color: var(--info-ink); border: 1px solid var(--info-line);
-    border-radius: 8px; padding: 11px 14px; margin: 0 0 20px; font-size: 13px;
-  }
-  .info b { color: var(--info-ink); }
+  .wrap { max-width: 1120px; margin: 0 auto; padding: 26px 24px 72px; }
+  h1 { font-size: 23px; font-weight: 600; margin: 0 0 4px; letter-spacing: -0.01em; }
+  h2 { font-size: 18px; font-weight: 600; margin: 40px 0 12px; letter-spacing: -0.005em; }
+  .sub { color: var(--ink-faint); font-size: 14px; margin: 0 0 20px; max-width: 760px; }
+  p { margin: 8px 0; }
+  b, strong { font-weight: 600; color: var(--ink); }
+  a { color: var(--accent); text-decoration: none; }
+  .num { font-variant-numeric: tabular-nums; }
+  .mono { font-family: 'JetBrains Mono', ui-monospace, monospace; }
+  code { background: var(--bg-soft); border: 1px solid var(--border); padding: 1px 6px; border-radius: 4px; font-size: 12.5px; }
+
+  /* Banners */
+  .banner { border-radius: 6px; padding: 12px 16px; margin: 0 0 16px; font-size: 13.5px; line-height: 1.55; }
+  .banner.warn { background: #fef9e7; border: 1px solid #f5d76e; border-left: 4px solid var(--warn); color: var(--ink-soft); }
+  .banner.info { background: var(--accent-soft); border: 1px solid #cdddf0; border-left: 4px solid var(--accent); color: var(--ink-soft); }
+  .banner b { color: var(--ink); }
+
+  /* Hero status strip */
+  .hero { display: grid; grid-template-columns: auto 1fr; gap: 28px; align-items: center;
+    background: var(--bg-card); border: 1px solid var(--border); border-radius: 8px; padding: 20px 26px; }
+  .hero .score { text-align: center; min-width: 110px; }
+  .hero .score .big { font-size: 52px; font-weight: 700; line-height: 1; letter-spacing: -0.02em; }
+  .hero .score .of { color: var(--ink-faint); font-size: 13px; margin-top: 4px; }
+  .hero .asof { font-size: 13px; color: var(--ink-faint); margin-bottom: 10px; }
+  .chips { display: flex; flex-wrap: wrap; gap: 9px; }
+  .chip { display: flex; align-items: center; gap: 8px; border: 1px solid var(--border);
+    border-radius: 7px; padding: 7px 13px; font-size: 13.5px; background: var(--bg-card); }
+  .chip.on { border-color: #bfe3c8; background: var(--good-soft); }
+  .dot { width: 10px; height: 10px; border-radius: 50%; background: var(--border-strong); }
+  .dot.on { background: var(--good); }
+
+  /* Generic card */
+  .card { background: var(--bg-card); border: 1px solid var(--border); border-radius: 8px; padding: 16px 20px; }
+
+  /* Usage list */
+  ul.use { list-style: none; margin: 0; padding: 0; }
+  ul.use li { position: relative; padding: 11px 0 11px 26px; border-bottom: 1px solid var(--border); font-size: 14.5px; color: var(--ink-soft); }
+  ul.use li:last-child { border-bottom: none; }
+  ul.use li::before { content: ""; position: absolute; left: 4px; top: 18px; width: 8px; height: 8px;
+    border-radius: 50%; background: var(--accent); }
+
+  /* Tables */
+  table { border-collapse: collapse; width: 100%; font-size: 14px; }
+  th, td { text-align: right; padding: 9px 12px; border-bottom: 1px solid var(--border); }
+  th:first-child, td:first-child { text-align: left; }
+  thead th { color: var(--ink-faint); font-weight: 600; font-size: 12.5px; text-transform: uppercase;
+    letter-spacing: 0.03em; border-bottom: 2px solid var(--border-strong); }
+  tbody tr:hover { background: var(--bg-soft); }
+  .pos { color: var(--good); } .neg { color: var(--bad); }
+  .lift-hi { background: var(--good-soft); }
+  .col-hi { background: var(--accent-soft); }
   .noise-ok { font-weight: 700; }
-  .badge { display: inline-block; font-size: 10px; line-height: 1; padding: 2px 5px;
-    border-radius: 4px; background: var(--on); color: #fff; margin-left: 4px; vertical-align: middle; }
-  .use { background: var(--card); border: 1px solid var(--line); border-radius: 12px; padding: 6px 20px; }
-  .use li { margin: 9px 0; }
-  .use b { color: var(--ink); }
-  .dim { border: 1px solid var(--line); border-radius: 10px; padding: 12px 16px; margin: 10px 0; background: #fff; }
-  .dim-on { border-color: #bfe3c8; background: #fbfefb; }
-  .dim-head { display: flex; align-items: center; gap: 8px; font-size: 15px; }
-  .dim-state { margin-left: auto; font-size: 11px; text-transform: uppercase; letter-spacing: .04em;
-    color: var(--muted); border: 1px solid var(--line); border-radius: 20px; padding: 2px 9px; }
-  .dim-on .dim-state { color: var(--on); border-color: #bfe3c8; }
-  .dim-why { color: var(--muted); font-size: 12.5px; margin: 5px 0 12px; }
-  .gauge { margin: 12px 0 14px; }
-  .glabel { font-size: 13px; display: flex; align-items: baseline; gap: 8px; }
-  .glabel .gv { margin-left: auto; font-weight: 700; font-variant-numeric: tabular-nums; }
-  .gtrack { position: relative; height: 12px; background: #eef1f4; border-radius: 6px; margin: 7px 0 4px; }
+  .badge { display: inline-block; font-size: 10.5px; line-height: 1; padding: 3px 6px; border-radius: 5px;
+    background: var(--good); color: #fff; margin-left: 6px; vertical-align: middle; font-weight: 600; }
+  .badge.amber { background: var(--warn); }
+  .tnote { color: var(--ink-faint); font-size: 12.5px; margin-top: 8px; }
+
+  /* Formation dimension cards + gauges */
+  .dim { border: 1px solid var(--border); border-radius: 8px; padding: 14px 18px; margin: 12px 0; background: var(--bg-card); }
+  .dim.on { border-color: #bfe3c8; }
+  .dim-head { display: flex; align-items: center; gap: 9px; font-size: 15.5px; }
+  .dim-state { margin-left: auto; font-size: 11px; text-transform: uppercase; letter-spacing: .05em;
+    color: var(--ink-faint); border: 1px solid var(--border); border-radius: 20px; padding: 3px 11px; }
+  .dim.on .dim-state { color: var(--good); border-color: #bfe3c8; background: var(--good-soft); }
+  .dim-why { color: var(--ink-faint); font-size: 13px; margin: 6px 0 14px; }
+  .gauge { margin: 14px 0 16px; }
+  .glabel { font-size: 13.5px; display: flex; align-items: baseline; gap: 8px; color: var(--ink-soft); }
+  .glabel .gv { margin-left: auto; font-weight: 700; color: var(--ink); font-variant-numeric: tabular-nums; }
+  .gtrack { position: relative; height: 13px; background: var(--bg-soft); border: 1px solid var(--border);
+    border-radius: 7px; margin: 8px 0 4px; }
   .gfill { position: absolute; left: 0; top: 0; height: 100%; background: #c9d8ec; border-radius: 6px 0 0 6px; }
   .gfill-on { background: #9ed0ad; }
-  .gval { position: absolute; top: -2px; width: 2px; height: 16px; background: var(--ink); transform: translateX(-1px); }
-  .gm { position: absolute; top: 0; height: 12px; border-left: 1.5px dashed #9aa4ad; }
-  .gm-l { position: absolute; top: 13px; left: 0; transform: translateX(-50%);
-    font-size: 9.5px; color: var(--muted); white-space: nowrap; }
-  .ghint { color: var(--muted); font-size: 11.5px; margin-top: 16px; }
-  .grid { display: grid; gap: 14px; }
-  .status { display: grid; grid-template-columns: auto 1fr; gap: 22px; align-items: center;
-    background: var(--card); border: 1px solid var(--line); border-radius: 12px; padding: 18px 22px; }
-  .score { text-align: center; }
-  .score .big { font-size: 46px; font-weight: 700; line-height: 1; }
-  .score .of { color: var(--muted); font-size: 13px; }
-  .chips { display: flex; flex-wrap: wrap; gap: 8px; }
-  .chip { display: flex; align-items: center; gap: 7px; border: 1px solid var(--line);
-    border-radius: 20px; padding: 5px 12px; font-size: 13px; background: #fff; }
-  .dot { width: 9px; height: 9px; border-radius: 50%; background: var(--off); }
-  .dot.on { background: var(--on); }
-  table { border-collapse: collapse; width: 100%; font-size: 13.5px; }
-  th, td { text-align: right; padding: 7px 10px; border-bottom: 1px solid var(--line); }
-  th:first-child, td:first-child { text-align: left; }
-  thead th { color: var(--muted); font-weight: 600; border-bottom: 2px solid var(--line); }
-  .pos { color: var(--on); } .neg { color: #b3261e; }
-  .lift-hi { background: #e6f4ea; } .lift-mid { background: #f4f9f5; }
-  .card { background: var(--card); border: 1px solid var(--line); border-radius: 12px; padding: 8px 12px; }
-  .foot { color: var(--muted); font-size: 12px; margin-top: 30px; }
-  code { background: #eef1f4; padding: 1px 5px; border-radius: 4px; font-size: 12.5px; }
-  .empty { color: var(--muted); font-style: italic; padding: 20px 0; }
+  .gval { position: absolute; top: -3px; width: 2.5px; height: 19px; background: var(--ink); transform: translateX(-1px); border-radius: 2px; }
+  .gm { position: absolute; top: 0; height: 13px; border-left: 1.5px dashed var(--ink-faint); }
+  .gm-l { position: absolute; top: 15px; left: 0; transform: translateX(-50%); font-size: 10px;
+    color: var(--ink-faint); white-space: nowrap; font-variant-numeric: tabular-nums; }
+  .ghint { color: var(--ink-faint); font-size: 12px; margin-top: 19px; }
+
+  .foot { color: var(--ink-faint); font-size: 12.5px; margin-top: 40px; padding-top: 16px; border-top: 1px solid var(--border); }
+  .empty { color: var(--ink-faint); font-style: italic; padding: 22px 0; }
 </style>
 </head>
 <body>
 <div class="wrap">
   <h1>Breadth-Thrust Signal</h1>
-  <p class="sub">Risk-on conviction meter — the bullish mirror of the Equity Defense Dashboard. Grouped four-dimension breadth score, with a conditional forward-return study versus a bootstrap baseline.</p>
+  <p class="sub">Risk-on conviction meter — the bullish mirror of the Equity Defense Dashboard. A grouped four-dimension breadth score with a conditional forward-return study measured against a bootstrap baseline.</p>
+
   <div id="banner"></div>
   <div id="scope"></div>
-  <div id="status" class="status"></div>
+  <div id="status" class="hero"></div>
 
   <h2>How to use this</h2>
   <ul class="use">
@@ -94,6 +124,12 @@
     <li><b>Combine, do not isolate.</b> This is the bullish mirror of the Equity Defense Dashboard. Use it to gauge risk-on conviction alongside your defensive signals, not as a lone timing model.</li>
     <li><b>Mind the caveats.</b> Eight years is a thin sample (few fresh events); 111 of 715 former members are unfetchable and drop from history; pre-2018 is excluded. Treat conclusions as suggestive.</li>
   </ul>
+
+  <h2>Tracking the latest signal</h2>
+  <p class="sub" style="font-size:13px">How the most recent thrust has actually played out versus the range its historical analogues projected. The shaded cone is the conditional p10–p90 band at the event's trigger level; the dark line is realised SPX since the signal.</p>
+  <div id="lastsig_head"></div>
+  <div id="lastsig_chart" style="height:380px"></div>
+  <div id="lastsig_table"></div>
 
   <h2>SPX with thrust events and conviction score</h2>
   <div id="chart_price" style="height:360px"></div>
@@ -116,10 +152,8 @@
 <script type="application/json" id="signals-data">__SIGNALS_JSON__</script>
 <script>
 function load() {
-  // pipeline.py replaces the token in the data island above with JSON. For
-  // standalone dev (npx serve .) the token stays put, so fall back to fetch.
   const raw = document.getElementById("signals-data").textContent.trim();
-  if (raw === "__SIGNALS_JSON__" || raw === "") {
+  if (raw === "__SIGNALS" + "_JSON__" || raw === "") {
     return fetch("data/signals.json").then(r => r.json());
   }
   return Promise.resolve(JSON.parse(raw));
@@ -127,12 +161,16 @@ function load() {
 
 const pct = x => (x === null || x === undefined || isNaN(x)) ? "—" : (x * 100).toFixed(1) + "%";
 const signed = x => (x === null || x === undefined || isNaN(x)) ? "—" : (x >= 0 ? "+" : "") + (x * 100).toFixed(1) + "%";
+const clamp = v => Math.max(0, Math.min(100, v));
+
+const PLOT_FONT = { family: "Inter, sans-serif", size: 12, color: "#3f464e" };
+const AXIS = { gridcolor: "#eef1f4", zerolinecolor: "#d6dbe0", linecolor: "#c8ccd2", tickfont: PLOT_FONT };
 
 function renderBanner(d) {
   if (d.survivorship_bias) {
-    document.getElementById("banner").className = "banner";
-    document.getElementById("banner").innerHTML =
-      "<b>Survivorship-biased universe.</b> No point-in-time membership snapshot was found, so breadth is computed on a static current-member list. Forward returns will look cleaner than reality. Supply <code>data/constituents_csp1.json</code> for a publishable result.";
+    const el = document.getElementById("banner");
+    el.className = "banner warn";
+    el.innerHTML = "<b>Survivorship-biased universe.</b> No point-in-time membership snapshot was found, so breadth is computed on a static current-member list. Forward returns will look cleaner than reality. Supply <code>data/constituents_csp1.json</code> for a publishable result.";
   }
 }
 
@@ -140,93 +178,163 @@ function renderScope(d) {
   const w = (d.study && d.study.window) || {};
   const q = d.data_quality || {};
   const bits = [];
-  if (w.start && w.end) {
-    bits.push(`<b>Study window ${w.start} → ${w.end}</b> (${w.trading_days} trading days). Conditional sample and bootstrap baseline are period-matched to this window.`);
-  }
-  if (!d.survivorship_bias) {
-    bits.push("Membership is <b>point-in-time</b> (survivorship-correct).");
-  }
-  if (q.ever_members && q.unfetchable_members) {
-    bits.push(`Residual data-layer leak: of ${q.ever_members} ever-members, <b>${q.unfetchable_members}</b> are delisted/renamed beyond the price source and drop from historical breadth (these skew weak, mildly understating past declines).`);
-  }
+  if (w.start && w.end) bits.push(`<b>Study window ${w.start} → ${w.end}</b> (${w.trading_days} trading days). Conditional sample and bootstrap baseline are period-matched to this window.`);
+  if (!d.survivorship_bias) bits.push("Membership is <b>point-in-time</b> (survivorship-correct).");
+  if (q.ever_members && q.unfetchable_members) bits.push(`Residual data-layer leak: of ${q.ever_members} ever-members, <b>${q.unfetchable_members}</b> are delisted/renamed beyond the price source and drop from historical breadth (these skew weak, mildly understating past declines).`);
   if (!bits.length) return;
   const el = document.getElementById("scope");
-  el.className = "info";
+  el.className = "banner info";
   el.innerHTML = bits.join(" ");
 }
 
 function renderStatus(d) {
   const c = d.current;
   const chips = Object.values(c.dimensions).map(x =>
-    `<div class="chip"><span class="dot ${x.on ? "on" : ""}"></span>${x.label}</div>`).join("");
+    `<div class="chip ${x.on ? "on" : ""}"><span class="dot ${x.on ? "on" : ""}"></span>${x.label}</div>`).join("");
   document.getElementById("status").innerHTML =
-    `<div class="score"><div class="big">${c.n_dimensions}</div><div class="of">of 4 dimensions</div></div>
-     <div><div style="font-size:13px;color:var(--muted);margin-bottom:8px">As of ${c.as_of}${c.data_ok ? "" : " — thin breadth data, treat with caution"}</div>
+    `<div class="score"><div class="big num">${c.n_dimensions}</div><div class="of">of 4 dimensions on</div></div>
+     <div><div class="asof">As of ${c.as_of}${c.data_ok ? "" : " — thin breadth data, treat with caution"} · ${c.valid_count || "—"} valid constituents</div>
      <div class="chips">${chips}</div></div>`;
+}
+
+function renderLastSignal(d) {
+  const ls = d.last_signal;
+  const head = document.getElementById("lastsig_head");
+  if (!ls || !ls.date) { head.innerHTML = "<div class='empty'>No thrust event in the valid window yet.</div>"; return; }
+
+  const cond = {};
+  d.study.conditional.forEach(r => cond[r.threshold + "|" + r.horizon] = r);
+  const HZ = ls.horizons;
+  const hkeys = Object.keys(HZ);
+  const score = ls.score;
+
+  // Verdict against the event's own trigger level, at the longest elapsed horizon.
+  let elapsed = hkeys.filter(h => ls.realized_by_horizon[h] !== null);
+  let vtxt = "";
+  if (elapsed.length) {
+    const h = elapsed[elapsed.length - 1];
+    const r = cond[score + "|" + h], real = ls.realized_by_horizon[h];
+    if (r) {
+      let where = "within";
+      if (real > r.p90_ret) where = "above the top of";
+      else if (real < r.p10_ret) where = "below the bottom of";
+      else if (real > r.median_ret) where = "in the upper half of";
+      else where = "in the lower half of";
+      vtxt = ` At ${h}, realised ${signed(real)} landed <b>${where}</b> the score-≥${score} projected range [${signed(r.p10_ret)}, ${signed(r.p90_ret)}], median ${signed(r.median_ret)}.`;
+    }
+  }
+  const rcls = ls.realized_to_now >= 0 ? "pos" : "neg";
+  head.className = "banner info";
+  head.innerHTML =
+    `<b>Last thrust: ${ls.date}, score ${score} / 4.</b> Measured from the next session (${ls.anchor_date}, SPX ${ls.spx_at_anchor.toLocaleString()}), SPX is <span class="${rcls}"><b>${signed(ls.realized_to_now)}</b></span> over ${ls.days_since} trading days, now ${ls.spx_now.toLocaleString()}.${vtxt}`;
+
+  // ----- Fan chart: projected p10-p90 cone at the event level + realised path -----
+  const xb = [0].concat(hkeys.map(h => HZ[h]));
+  const lo = [0], hi = [0], med = [0];
+  hkeys.forEach(h => {
+    const r = cond[score + "|" + h] || {};
+    lo.push(r.p10_ret); hi.push(r.p90_ret); med.push(r.median_ret);
+  });
+  const band_lo = { x: xb, y: lo, mode: "lines", line: { width: 0 }, showlegend: false, hoverinfo: "skip" };
+  const band_hi = {
+    x: xb, y: hi, mode: "lines", line: { width: 0 }, fill: "tonexty",
+    fillcolor: "rgba(19,81,180,0.10)", name: `≥${score} projected p10–p90`,
+    hovertemplate: "p90 %{y:.1%}<extra></extra>"
+  };
+  const medline = {
+    x: xb, y: med, mode: "lines+markers", line: { color: "#1351b4", width: 1.6, dash: "dot" },
+    marker: { size: 5, color: "#1351b4" }, name: `≥${score} projected median`,
+    hovertemplate: "median %{y:.1%}<extra></extra>"
+  };
+  const realized = {
+    x: ls.path_days, y: ls.path_ret, mode: "lines", line: { color: "#111418", width: 2 },
+    name: "realised SPX", hovertemplate: "day %{x}<br>%{y:.1%}<extra></extra>"
+  };
+  const zero = { x: [0, Math.max.apply(null, xb)], y: [0, 0], mode: "lines", line: { color: "#d6dbe0", width: 1 }, showlegend: false, hoverinfo: "skip" };
+  Plotly.newPlot("lastsig_chart", [zero, band_lo, band_hi, medline, realized], {
+    margin: { l: 54, r: 14, t: 10, b: 40 }, font: PLOT_FONT, paper_bgcolor: "#fff", plot_bgcolor: "#fff",
+    legend: { orientation: "h", y: 1.14, font: PLOT_FONT },
+    xaxis: Object.assign({}, AXIS, { title: { text: "trading days since signal", font: PLOT_FONT }, tickvals: xb }),
+    yaxis: Object.assign({}, AXIS, { title: { text: "return from signal", font: PLOT_FONT }, tickformat: ".0%" })
+  }, { displayModeBar: false, responsive: true });
+
+  // ----- Table: realised vs projection at each trigger level -----
+  const levels = [1, 2, 3].filter(t => t <= Math.max(1, 4));
+  let html = "<table><thead><tr><th>Horizon</th><th>Realised (this signal)</th>" +
+    levels.map(t => `<th class="${t === score ? "col-hi" : ""}">Proj ≥${t} median [p10, p90]</th>`).join("") + "</tr></thead><tbody>";
+  hkeys.forEach(h => {
+    const real = ls.realized_by_horizon[h];
+    const rc = real === null ? "" : (real >= 0 ? "pos" : "neg");
+    const realCell = real === null ? '<span style="color:var(--ink-faint)">pending</span>' : `<b class="${rc}">${signed(real)}</b>`;
+    html += `<tr><td><b>${h}</b></td><td>${realCell}</td>` +
+      levels.map(t => {
+        const r = cond[t + "|" + h];
+        if (!r) return "<td>—</td>";
+        let mark = "";
+        if (real !== null) {
+          if (real > r.p90_ret) mark = '<span class="badge">above range</span>';
+          else if (real < r.p10_ret) mark = '<span class="badge amber">below range</span>';
+        }
+        return `<td class="${t === score ? "col-hi" : ""}"><span class="num">${signed(r.median_ret)}</span> ` +
+          `<span style="color:var(--ink-faint)" class="num">[${signed(r.p10_ret)}, ${signed(r.p90_ret)}]</span>${t === score ? mark : ""}</td>`;
+      }).join("") + "</tr>";
+  });
+  html += "</tbody></table>";
+  html += `<p class="tnote">Projections are the historical conditional distribution of forward returns at each trigger level over the study window (n = ${(cond["3|6m"] || {}).n || "—"} events at ≥3). The event reached score ${score}, so the ≥${score} column (highlighted) is its own analogue set. Small samples make the band wide — read it as a plausible range, not a forecast.</p>`;
+  document.getElementById("lastsig_table").innerHTML = html;
 }
 
 function renderCharts(d) {
   const t = d.timeline;
   const evIdx = t.event.map((e, i) => e ? i : -1).filter(i => i >= 0);
-  const price = {
-    x: t.dates, y: t.spx, type: "scatter", mode: "lines",
-    line: { color: "#1a1a1a", width: 1.2 }, name: "SPX", hovertemplate: "%{x}<br>%{y}<extra></extra>"
-  };
+  const price = { x: t.dates, y: t.spx, type: "scatter", mode: "lines", line: { color: "#111418", width: 1.3 }, name: "SPX", hovertemplate: "%{x}<br>%{y}<extra></extra>" };
   const events = {
-    x: evIdx.map(i => t.dates[i]), y: evIdx.map(i => t.spx[i]),
-    type: "scatter", mode: "markers", name: "thrust event",
-    marker: { color: "#1f6feb", size: 7, symbol: "triangle-up" },
+    x: evIdx.map(i => t.dates[i]), y: evIdx.map(i => t.spx[i]), type: "scatter", mode: "markers",
+    name: "thrust event", marker: { color: "#1351b4", size: 8, symbol: "triangle-up" },
     hovertemplate: "%{x}<br>thrust event<extra></extra>"
   };
   Plotly.newPlot("chart_price", [price, events], {
-    margin: { l: 48, r: 12, t: 8, b: 24 }, showlegend: true,
-    legend: { orientation: "h", y: 1.12 }, yaxis: { gridcolor: "#eef1f4" },
-    xaxis: { gridcolor: "#eef1f4" }, paper_bgcolor: "#fff", plot_bgcolor: "#fff"
+    margin: { l: 54, r: 14, t: 8, b: 28 }, font: PLOT_FONT, showlegend: true,
+    legend: { orientation: "h", y: 1.14, font: PLOT_FONT }, yaxis: AXIS, xaxis: AXIS,
+    paper_bgcolor: "#fff", plot_bgcolor: "#fff"
   }, { displayModeBar: false, responsive: true });
 
   const score = {
     x: t.dates, y: t.n_dimensions, type: "scatter", mode: "lines", fill: "tozeroy",
-    line: { color: "#1f6feb", width: 0.8 }, fillcolor: "rgba(31,111,235,0.18)",
-    name: "score", hovertemplate: "%{x}<br>%{y} of 4<extra></extra>"
+    line: { color: "#1351b4", width: 1 }, fillcolor: "rgba(19,81,180,0.14)", name: "score",
+    hovertemplate: "%{x}<br>%{y} of 4<extra></extra>"
   };
   Plotly.newPlot("chart_score", [score], {
-    margin: { l: 48, r: 12, t: 6, b: 24 }, showlegend: false,
-    yaxis: { range: [0, 4.2], dtick: 1, gridcolor: "#eef1f4", title: { text: "dimensions on", font: { size: 11 } } },
-    xaxis: { gridcolor: "#eef1f4" }, paper_bgcolor: "#fff", plot_bgcolor: "#fff"
+    margin: { l: 54, r: 14, t: 6, b: 28 }, font: PLOT_FONT, showlegend: false,
+    yaxis: Object.assign({}, AXIS, { range: [0, 4.2], dtick: 1, title: { text: "dimensions on", font: PLOT_FONT } }),
+    xaxis: AXIS, paper_bgcolor: "#fff", plot_bgcolor: "#fff"
   }, { displayModeBar: false, responsive: true });
 }
 
 function renderLift(d) {
   const horizons = ["1w", "1m", "3m", "6m", "12m"];
-  const rows = d.study.lift;
   const byThr = {};
-  rows.forEach(r => { (byThr[r.threshold] = byThr[r.threshold] || {})[r.horizon] = r; });
+  d.study.lift.forEach(r => { (byThr[r.threshold] = byThr[r.threshold] || {})[r.horizon] = r; });
   const base = {};
   d.study.baseline.forEach(b => base[b.horizon] = b);
 
-  let html = "<table><thead><tr><th>Conviction</th><th>Stat</th>" +
-    horizons.map(h => `<th>${h}</th>`).join("") + "</tr></thead><tbody>";
-  // baseline row
+  let html = "<table><thead><tr><th>Conviction</th><th>Stat</th>" + horizons.map(h => `<th>${h}</th>`).join("") + "</tr></thead><tbody>";
   html += `<tr><td>Baseline (any day)</td><td>win / median</td>` +
-    horizons.map(h => base[h] ? `<td>${pct(base[h].base_win_rate)}<br><span style="color:var(--muted)">${signed(base[h].base_median_ret)}</span></td>` : "<td>—</td>").join("") + "</tr>";
+    horizons.map(h => base[h] ? `<td>${pct(base[h].base_win_rate)}<br><span style="color:var(--ink-faint)">${signed(base[h].base_median_ret)}</span></td>` : "<td>—</td>").join("") + "</tr>";
   [1, 2, 3, 4].forEach(thr => {
     const r0 = byThr[thr] || {};
     const n = horizons.map(h => r0[h] ? r0[h].n : 0).reduce((a, b) => Math.max(a, b), 0);
-    html += `<tr><td>Score ≥ ${thr} <span style="color:var(--muted)">(n=${n})</span></td><td>win (lift)</td>` +
+    html += `<tr><td>Score ≥ ${thr} <span style="color:var(--ink-faint)">(n=${n})</span></td><td>win (lift)</td>` +
       horizons.map(h => {
         const r = r0[h];
         if (!r || r.n === 0) return "<td>—</td>";
-        const lift = r.win_lift;
-        // Colour only when the conditional win rate clears the 95th pct of the
-        // baseline band (win_beyond_noise). A positive lift INSIDE the band is
-        // not distinguishable from sampling noise, so it gets no green.
         const cls = r.win_beyond_noise ? "lift-hi" : "";
-        const lc = lift >= 0 ? "pos" : "neg";
-        const badge = r.win_beyond_noise ? '<span class="badge" title="above 95th pct of baseline band">clears noise</span>' : "";
+        const lc = r.win_lift >= 0 ? "pos" : "neg";
+        const badge = r.win_beyond_noise ? '<span class="badge">clears noise</span>' : "";
         const wr = r.win_beyond_noise ? `<span class="noise-ok">${pct(r.win_rate)}</span>` : pct(r.win_rate);
-        return `<td class="${cls}">${wr}${badge}<br><span class="${lc}">${signed(lift)}</span></td>`;
+        return `<td class="${cls}">${wr}${badge}<br><span class="${lc}">${signed(r.win_lift)}</span></td>`;
       }).join("") + "</tr>";
-    html += `<tr><td></td><td style="color:var(--muted)">median (lift)</td>` +
+    html += `<tr><td></td><td style="color:var(--ink-faint)">median (lift)</td>` +
       horizons.map(h => {
         const r = r0[h];
         if (!r || r.n === 0) return "<td>—</td>";
@@ -239,22 +347,17 @@ function renderLift(d) {
 }
 
 function renderVerdict(d) {
-  const rows = d.study.lift;
-  const get = (thr, h) => rows.find(r => r.threshold === thr && r.horizon === h);
+  const get = (thr, h) => d.study.lift.find(r => r.threshold === thr && r.horizon === h);
   const r3 = get(3, "6m");
   if (!r3) return;
-  // Decision criterion (brief): score >= 3 at 6m — median meaningfully above
-  // unconditional AND win-rate lift clearing the baseline noise band.
   const medPass = r3.ret_lift !== null && r3.ret_lift > 0.01;
   const winPass = !!r3.win_beyond_noise;
   const el = document.getElementById("verdict");
-  el.className = "info";
+  el.className = "banner info";
   el.innerHTML =
     `<b>Read against the decision criterion (score ≥ 3, 6-month).</b> ` +
-    `Median forward return ${signed(r3.median_ret)} vs baseline ${signed(r3.base_median_ret)} ` +
-    `(lift ${signed(r3.ret_lift)}) — ${medPass ? "meaningfully above unconditional ✓" : "not meaningfully above ✗"}. ` +
-    `Win rate ${pct(r3.win_rate)} vs baseline ${pct(r3.base_win_rate)} ` +
-    `(lift ${signed(r3.win_lift)}) — ${winPass ? "clears the noise band ✓" : "sits <i>inside</i> the baseline band, not distinguishable from noise ✗"}. ` +
+    `Median forward return ${signed(r3.median_ret)} vs baseline ${signed(r3.base_median_ret)} (lift ${signed(r3.ret_lift)}) — ${medPass ? "meaningfully above unconditional ✓" : "not meaningfully above ✗"}. ` +
+    `Win rate ${pct(r3.win_rate)} vs baseline ${pct(r3.base_win_rate)} (lift ${signed(r3.win_lift)}) — ${winPass ? "clears the noise band ✓" : "sits <i>inside</i> the baseline band, not distinguishable from noise ✗"}. ` +
     `<br><b>Caveats:</b> only n=${r3.n} fresh events at score ≥ 3 over the window, so the win rate carries a binomial standard error near ±10pp. ` +
     `The win-rate lift also <i>falls</i> as conviction rises (strongest at ≥1/≥2, weakest at ≥3/≥4), the opposite of what a conviction meter should show — treat as suggestive, not a confirmed standalone ≥3 timing trigger.`;
 }
@@ -262,15 +365,10 @@ function renderVerdict(d) {
 function renderFormation(d) {
   const f = d.formation;
   if (!f || !f.dimensions) return;
-  const clamp = v => Math.max(0, Math.min(100, v));
-  let html =
-    `<p class="sub" style="font-size:13px">Each session, four independent breadth dimensions are checked for a thrust. ` +
-    `Within a dimension the sub-conditions share one data series, so they are OR-ed and count once; across dimensions the score is the number currently on (0–4). ` +
-    `A dimension that fires stays "on" for ${f.memory_days} trading days, so clustered thrusts read as sustained conviction. The bars below show where each live reading sits relative to its trigger.</p>`;
+  let html = `<p class="sub" style="font-size:13px">Each session, four independent breadth dimensions are checked for a thrust. Within a dimension the sub-conditions share one data series, so they are OR-ed and count once; across dimensions the score is the number currently on (0–4). A dimension that fires stays "on" for ${f.memory_days} trading days, so clustered thrusts read as sustained conviction. The bars show where each live reading sits relative to its trigger.</p>`;
   f.dimensions.forEach(dim => {
-    html += `<div class="dim ${dim.on ? "dim-on" : ""}">` +
-      `<div class="dim-head"><span class="dot ${dim.on ? "on" : ""}"></span><b>${dim.label}</b>` +
-      `<span class="dim-state">${dim.on ? "on" : "off"}</span></div>` +
+    html += `<div class="dim ${dim.on ? "on" : ""}">` +
+      `<div class="dim-head"><span class="dot ${dim.on ? "on" : ""}"></span><b>${dim.label}</b><span class="dim-state">${dim.on ? "on" : "off"}</span></div>` +
       `<div class="dim-why">${dim.why}</div>`;
     dim.gauges.forEach(g => {
       const span = (g.scale.max - g.scale.min) || 1;
@@ -281,10 +379,8 @@ function renderFormation(d) {
       }).join("");
       const fill = pos === null ? "" : `<span class="gfill ${g.fired ? "gfill-on" : ""}" style="width:${pos}%"></span>`;
       const val = pos === null ? "" : `<span class="gval" style="left:${pos}%"></span>`;
-      html += `<div class="gauge"><div class="glabel">${g.label}` +
-        `${g.fired ? '<span class="badge">firing</span>' : ""}<span class="gv">${g.display}</span></div>` +
-        `<div class="gtrack">${fill}${markers}${val}</div>` +
-        `<div class="ghint">${g.hint}</div></div>`;
+      html += `<div class="gauge"><div class="glabel">${g.label}${g.fired ? '<span class="badge">firing</span>' : ""}<span class="gv">${g.display}</span></div>` +
+        `<div class="gtrack">${fill}${markers}${val}</div><div class="ghint">${g.hint}</div></div>`;
     });
     html += `</div>`;
   });
@@ -293,21 +389,22 @@ function renderFormation(d) {
 
 function renderMethod(d) {
   document.getElementById("method").innerHTML =
-    `<p style="margin:6px 0">${d.config.note}</p>
-     <p style="margin:6px 0;color:var(--muted)">Memory window: ${d.config.memory_days} trading days. Dimensions: D1 advance/decline (Zweig OR 10-day A/D OR McClellan), D2 % above 50-day MA, D3 new-high/new-low, D4 up-volume. Baseline bootstrapped with a moving-block resample to preserve forward-window autocorrelation.</p>`;
+    `<p>${d.config.note}</p>
+     <p style="color:var(--ink-faint);font-size:13px">Memory window: ${d.config.memory_days} trading days. Dimensions: D1 advance/decline (Zweig OR 10-day A/D OR McClellan), D2 % above 50-day MA, D3 new-high/new-low, D4 up-volume. Baseline bootstrapped with a moving-block resample to preserve forward-window autocorrelation.</p>`;
 }
 
 load().then(d => {
   renderBanner(d);
   renderScope(d);
   renderStatus(d);
+  renderLastSignal(d);
   renderCharts(d);
   renderLift(d);
   renderVerdict(d);
   renderFormation(d);
   renderMethod(d);
-  document.getElementById("foot").textContent =
-    "Generated " + (d.generated_utc || "—") + " · simulated study, not investment advice · single-source S&P 500 proxy breadth";
+  document.getElementById("foot").innerHTML =
+    "Generated " + (d.generated_utc || "—") + " · research artefact, not investment advice · single-source S&P 500 proxy breadth";
 }).catch(e => {
   document.getElementById("status").innerHTML =
     `<div class="empty">No data yet. Run <code>python scripts/pipeline.py</code> (or <code>--self-test</code>) to populate, then reload.</div>`;

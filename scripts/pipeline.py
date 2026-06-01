@@ -167,6 +167,61 @@ def timeline(composite: pd.DataFrame, spx: pd.Series) -> dict:
     }
 
 
+def last_signal_block(composite: pd.DataFrame, spx: pd.Series) -> dict:
+    """Track the most recent thrust event against its own historical projection.
+
+    Finds the last fresh event in the valid-breadth window, anchors at the
+    session AFTER it (the no-lookahead convention the study uses), and reports
+    the realised SPX path since, plus this event's realised forward return at
+    each horizon. The projected median and range come from the conditional
+    study (study.conditional, joined by threshold/horizon in the dashboard).
+    """
+    lo, hi = valid_window(composite)
+    if lo is None:
+        return {}
+    comp = composite.loc[(composite.index >= lo) & (composite.index <= hi)]
+    px = spx[(spx.index >= lo) & (spx.index <= hi)].sort_index()
+    # Align scores onto the price index.
+    nd = comp["n_dimensions"].reindex(px.index)
+    ev = comp["event"].reindex(px.index).fillna(False).astype(bool)
+
+    ev_positions = [i for i, e in enumerate(ev.to_numpy()) if e and nd.iloc[i] >= 1]
+    if not ev_positions:
+        return {}
+    e = ev_positions[-1]
+    anchor = e + 1  # forward window starts the next session (matches the study)
+    if anchor >= len(px):
+        return {}
+
+    vals = px.to_numpy(dtype=float)
+    base = vals[anchor]
+    last = len(px) - 1
+    days_since = int(last - anchor)
+    score = int(nd.iloc[e])
+
+    realized_by_h = {}
+    for label, h in fr.HORIZONS.items():
+        j = anchor + h
+        realized_by_h[label] = (float(vals[j] / base - 1.0) if j <= last else None)
+
+    path_days = list(range(0, days_since + 1))
+    path_ret = [float(vals[anchor + k] / base - 1.0) for k in path_days]
+
+    return {
+        "date": px.index[e].strftime("%Y-%m-%d"),
+        "anchor_date": px.index[anchor].strftime("%Y-%m-%d"),
+        "score": score,
+        "days_since": days_since,
+        "spx_at_anchor": round(float(base), 2),
+        "spx_now": round(float(vals[last]), 2),
+        "realized_to_now": float(vals[last] / base - 1.0),
+        "realized_by_horizon": realized_by_h,
+        "horizons": fr.HORIZONS,
+        "path_days": path_days,
+        "path_ret": [round(r, 5) for r in path_ret],
+    }
+
+
 def formation_block(composite: pd.DataFrame, panels) -> dict:
     """Live per-dimension breakdown for the dashboard's "how it is formed" view.
 
@@ -272,6 +327,7 @@ def build_payload(composite, spx, survivorship_bias, data_quality=None, panels=N
         },
         "current": current_status(composite),
         "formation": formation_block(composite, panels) if panels is not None else {},
+        "last_signal": last_signal_block(composite, spx),
         "study": run_study(composite, spx),
         "timeline": timeline(composite, spx),
     }

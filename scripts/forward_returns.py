@@ -112,15 +112,28 @@ def conditional_table(
             if events_only:
                 cond = cond & event
             sel = cond & fwd.notna()
+            vals = fwd[sel]
+            has = bool(sel.any())
+
+            def _pct(q):
+                # Percentile of the conditional forward-return distribution —
+                # this is the "range" a reader should expect around the median,
+                # not a confidence interval on the median itself.
+                return float(np.percentile(vals, q)) if has else float("nan")
+
             rows.append(
                 {
                     "threshold": n,
                     "horizon": label,
                     "n": int(sel.sum()),
-                    "win_rate": _win_rate(fwd[sel]),
-                    "median_ret": float(fwd[sel].median()) if sel.any() else float("nan"),
-                    "mean_ret": float(fwd[sel].mean()) if sel.any() else float("nan"),
-                    "median_max_dd": float(mdd[sel].median()) if sel.any() else float("nan"),
+                    "win_rate": _win_rate(vals),
+                    "median_ret": float(vals.median()) if has else float("nan"),
+                    "mean_ret": float(vals.mean()) if has else float("nan"),
+                    "p10_ret": _pct(10),
+                    "p25_ret": _pct(25),
+                    "p75_ret": _pct(75),
+                    "p90_ret": _pct(90),
+                    "median_max_dd": float(mdd[sel].median()) if has else float("nan"),
                 }
             )
     return pd.DataFrame(rows)

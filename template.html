@@ -153,7 +153,7 @@
     </ul>
 
     <h2>SPX with thrust events and conviction score</h2>
-    <p class="sub" style="font-size:13px">Markers are sized and coloured by conviction: faint grey for minor thrusts (score 1–2), <span style="color:#1d7a3a;font-weight:600">green</span> for high-conviction score 3, and a larger <span style="color:#0c5e2c;font-weight:600">green star</span> for the rare score 4. The dashed line on the lower panel marks the score ≥ 3 high-conviction threshold.</p>
+    <p class="sub" style="font-size:13px">High-conviction events are marked with a vertical guide and a <span style="color:#1d7a3a;font-weight:600">green triangle</span> (score 3) or a larger <span style="color:#0c5e2c;font-weight:600">green star</span> (the rare score 4). Minor thrusts (score 1–2) are hidden by default — click their legend entry to show them. The dashed line on the lower panel marks the score ≥ 3 high-conviction threshold.</p>
     <div id="chart_price" style="height:360px"></div>
     <div id="chart_score" style="height:160px"></div>
   </section>
@@ -359,22 +359,32 @@ function renderCharts(d) {
   // Encode conviction into the markers: mute the minor (score 1–2) thrusts and
   // make the high-conviction ones prominent and green, with the rare score-4
   // events unmistakable (larger star). Score is the dimension count at the event.
-  const evTrace = (name, idxs, color, size, symbol) => ({
+  const evTrace = (name, idxs, color, size, symbol, extra) => Object.assign({
     x: idxs.map(i => t.dates[i]), y: idxs.map(i => t.spx[i]),
     type: "scatter", mode: "markers", name: name,
-    marker: { color: color, size: size, symbol: symbol, line: { color: "#fff", width: 1.2 } },
+    marker: { color: color, size: size, symbol: symbol, line: { color: "#fff", width: 2 } },
     hovertemplate: "%{x}<br>" + name + "<extra></extra>"
-  });
+  }, extra || {});
   const ev12 = evIdx.filter(i => t.n_dimensions[i] <= 2);
   const ev3 = evIdx.filter(i => t.n_dimensions[i] === 3);
   const ev4 = evIdx.filter(i => t.n_dimensions[i] >= 4);
   const traces = [price];
-  if (ev12.length) traces.push(evTrace("thrust · score 1–2", ev12, "#9aa7b8", 7, "triangle-up"));
-  if (ev3.length) traces.push(evTrace("thrust · score 3", ev3, "#1d7a3a", 12, "triangle-up"));
-  if (ev4.length) traces.push(evTrace("thrust · score 4", ev4, "#0c5e2c", 17, "star"));
+  // Minor thrusts (1–2) are hidden by default to declutter; click the legend
+  // to show them. The high-conviction 3/4 events are the focus.
+  if (ev12.length) traces.push(evTrace("thrust · score 1–2", ev12, "#7d8aa0", 8, "triangle-up", { visible: "legendonly" }));
+  if (ev3.length) traces.push(evTrace("thrust · score 3", ev3, "#1d7a3a", 14, "triangle-up"));
+  if (ev4.length) traces.push(evTrace("thrust · score 4", ev4, "#0c5e2c", 22, "star"));
+
+  // Faint full-height guide lines at every high-conviction event so the eye
+  // catches them against the busy price line. Score 4 lines are stronger.
+  const vlines = [];
+  ev3.forEach(i => vlines.push({ type: "line", xref: "x", x0: t.dates[i], x1: t.dates[i], yref: "paper", y0: 0, y1: 1, layer: "below", line: { color: "rgba(29,122,58,0.28)", width: 1.2 } }));
+  ev4.forEach(i => vlines.push({ type: "line", xref: "x", x0: t.dates[i], x1: t.dates[i], yref: "paper", y0: 0, y1: 1, layer: "below", line: { color: "rgba(12,94,44,0.6)", width: 2.4 } }));
+
   Plotly.newPlot("chart_price", traces, {
     margin: { l: 58, r: 14, t: 8, b: 28 }, font: PLOT_FONT, showlegend: true,
     legend: { orientation: "h", y: 1.14, font: PLOT_FONT },
+    shapes: vlines,
     yaxis: ax({
       type: "log",
       title: { text: "SPX (log scale)", font: PLOT_FONT },

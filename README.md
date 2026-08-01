@@ -211,6 +211,40 @@ ordering reported above did **not** reproduce out of sample (rank correlation
 +0.40 held-out against the negative ordering here) — that inversion was an
 eight-year artefact and the four-dimension grouping is vindicated.
 
+## Is it deployable? No — WS8, 2026-08-01
+
+WS7 left one cell alive: fresh events at score ≥ 3, one month forward, beyond
+noise on both legs in both windows and genuinely scarce. WS8 asked whether that
+is deployable, since WS7 had measured statistical lift and never run a
+net-of-cost backtest. Two findings, and they are not in tension.
+
+**The mechanism is real and it generalises.** Rebuilt unchanged on two further
+point-in-time universes, the same cell shows a positive median lift in both —
+**+1.04pp in the S&P SmallCap 600** (beyond noise on both legs, 42 distinct
+episodes) and +0.21pp in the Russell 2000 (within noise). Small-cap breadth
+carries a *larger* lift than large-cap's +0.72pp, which is economically
+sensible: a thrust across 600 smaller names says more about participation than
+the same reading across 500 mega-caps.
+
+**It is not convertible into portfolio value.** An unlevered tilt overlay
+(60/40 base, +20pp equity for 21 days on a fresh ≥3 event, 10bp costs) returns
+net Sharpe 0.709 against a cost-matched random-entry null whose 95th percentile
+is 0.751 — and below that null's *median* of 0.718. All 18 variants fall below
+the untilted base of 0.743, monotonically worse with larger tilts and longer
+holds, in all three universes.
+
+Why both are true: the one-month **mean** lift is +0.44pp against a **median**
+lift of +0.72pp, while volatility runs 1.16× baseline. A portfolio compounds
+means and pays for variance, so the statistic that survived every test is the
+one a portfolio cares about least. Independently, the +0.14pp of CAGR the tilt
+added matches the passive long-bias arithmetic for *any* 20pp tilt held 10.6%
+of the time, to four thousandths of a percentage point.
+
+Also dead, killed at the diagnostic stage: an `equity-defense-dashboard`
+re-entry accelerator (4–7 usable events in 28 years), a state-conditional
+overlay (a pre-2009-only effect), and a defensive-state override whose apparent
++4.58pp lift proved to be a composition artefact.
+
 ## Known caveats / next steps
 
 - **Residual data-layer leak.** *(RESOLVED for the Norgate layer, 2026-08-01.)*

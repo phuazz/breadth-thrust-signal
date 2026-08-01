@@ -348,4 +348,133 @@ question H1 surfaced. Either wait for genuinely new data, or pre-register a
 12-month study accepting that its evidence is pooled rather than held-out and
 saying so. Do not re-open the ≥3 / 6m decision on this evidence.
 
+---
+
+## WS8 — is the surviving cell deployable net of costs? 2026-08-01
+
+**Provenance.** Pre-registered spec
+`C:\dev\KICKOFF_ws8-thrust-tilt-deployability.md` (committed `vault-docs@8740710`
+before any result; sign-off cleared same day). Context: Personal.
+
+**Verdict in one line: the mechanism is real and generalises across three
+independent cross-sections; it is not convertible into portfolio value.**
+
+### What was already dead before WS8 started
+
+WS7 rejected ≥3 / six months. Follow-up diagnostics then killed three more
+candidate structures *before* any strategy was built. Recorded so they are not
+re-tread:
+
+| Structure | Why it died |
+|---|---|
+| EDD re-entry accelerator | The 42-day cooldown floor binds on only 9.0% of days, in episodes of median length 6 — it bites only after the raw score has already collapsed. Fresh thrusts landing while it binds: 4–7 in 28 years. |
+| State-conditional overlay (drawdown / sub-200d) | Median lift +2.6 to +13.0pp in 1990–2008, +0.2 to −1.9pp in 2009–2026. Post-GFC the state base rate is 80–95%; dip-buying worked unconditionally. |
+| Defensive-state override | Pooled +4.58pp 6m lift is a **composition artefact**: the ≥3 condition holds on 34% of defensive days pre-2009 but 93% post-2009, so the conditional sample over-samples the better era. Split: +5.99pp on 7 episodes pre-2009, −0.46pp post. The lift exists in neither era. |
+| Risk-reduction / leverage framing | Forward max drawdown after a thrust is equal to or worse than baseline at every horizon. |
+| Long-horizon holds | A 12-month hold is in the market 95.3% of days at ≥1. Buy-and-hold wearing a signal. |
+
+**Shared root cause: the score is not scarce** — on 63% of days at ≥2 and 36%
+at ≥3.
+
+### H1 — the tilt backtest (the decision)
+
+Unlevered overlay on a 60/40 SPX/Treasury base, monthly rebalance. V1: fresh
+≥3 event → +20pp equity for 21 days. Costs 10bp per unit of allocation change.
+Primary benchmark is a **cost-matched random-entry null** — the same tilt count,
+size, duration and costs, placed by random circular rotation of the realised
+tilt series, which preserves clustering exactly and destroys only the timing.
+
+| | Net Sharpe |
+|---|---|
+| Untilted 60/40 base | 0.743 |
+| **Headline V1 (+20pp, 21d)** | **0.709** |
+| Null p5 / p50 / p95 | 0.672 / 0.718 / **0.751** |
+
+**FAIL** against the pre-registered bar, and *below the null median* — the
+timing loses to randomly-placed tilts of identical size and frequency. **All 18
+variants underperform the untilted base**, monotonically worse in both tilt size
+and hold length. Both eras agree (−0.041 pre-2009, −0.029 post), so this is not
+era-dependence.
+
+**Mechanism, confirmed three independent ways.**
+
+1. The 1-month **mean** lift is +0.44pp against a **median** lift of +0.72pp,
+   while volatility runs **1.16×** baseline. A portfolio compounds means and
+   pays for variance; the statistic that survived every WS7 test is the one a
+   portfolio cares about least.
+2. The observed CAGR gain of +0.14pp matches the passive long-bias arithmetic
+   (0.106 × 0.20 × (10.4% − 4%) ≈ +0.136pp) to four thousandths of a point.
+   The timing contributed nothing.
+3. It loses to its own null.
+
+### H2 — cross-sectional replication (the mechanism test)
+
+Breadth rebuilt unchanged on two further point-in-time universes; each trades
+its own index.
+
+| Universe | Window | n | Clusters | Median | Base | Lift | Beyond noise |
+|---|---|---|---|---|---|---|---|
+| S&P 500 (WS7) | 1990–2026 | 46 | 41 | +1.97% | +1.25% | **+0.72pp** | both legs |
+| S&P SmallCap 600 | 1995–2026 | 48 | 42 | +2.46% | +1.42% | **+1.04pp** | both legs |
+| Russell 2000 | 1991–2026 | 21 | 19 | +1.59% | +1.38% | +0.21pp | neither |
+
+**Gate PASSES.** The mechanism replicates — strongly in the S&P 600 (a *larger*
+lift than large caps, beyond noise on both legs, 42 episodes) and weakly in the
+Russell 2000 (positive but within noise). Small-cap breadth carrying at least as
+much information as large-cap is economically coherent: a "thrust" across 600
+smaller names is a more meaningful statement about participation than the same
+reading across 500 mega-caps.
+
+**But the tilt fails in every universe:** Sharpe delta −0.034 (S&P 500), −0.007
+(S&P 600), −0.045 (Russell 2000). Even the best case buys +0.47pp of CAGR for
+3.8pp of extra drawdown.
+
+### Deviations, both forced, both guarded
+
+1. **Bond leg.** The spec named IEF; IEF begins 2002-07-26 and the window opens
+   1990. Rather than splice mid-sample, the whole window uses one synthetic
+   constant-maturity 10-year Treasury total return, validated against IEF over
+   the overlap: correlation 0.957, annual return gap −0.39pp. The decision is
+   near-insensitive since signal and null share the bond leg.
+2. **Count-based thresholds.** The McClellan floor (−50 net advances) and net
+   new highs (>20) are **counts, not ratios**. Taking "rebuild unchanged"
+   literally would make the signal ~4× looser on a 1,950-name Russell than on
+   the S&P 500 — the opposite of faithful. Both scaled and literal runs are
+   reported; scaling is the headline. `scale=1.0` leaves every filed S&P 500
+   result bit-identical, verified by re-running the WS7 H1 decision.
+
+### Decisions
+
+| Component | Decision | Basis |
+|---|---|---|
+| Thrust as an exposure-tilt strategy | **REJECT** | Fails its null; all 18 variants below base; fails in all three universes |
+| Thrust as a real breadth phenomenon | **CONFIRMED** | Replicates in S&P 600 beyond noise on 42 episodes; positive in Russell 2000 |
+| Small-cap breadth as the stronger read | **FLAGGED** | +1.04pp vs +0.72pp large-cap; candidate for any future work |
+| EDD integration | **REJECT** | Intervention surface is 4–7 events in 28 years |
+| Frozen engine constants | **KEEP** | Untouched; scaling only restores meaning across universes |
+
+### Trial register
+
+18 tilt variants × 1 universe + 4 replication runs (2 universes × 2 scaling
+modes) + 1 null of 2,000 draws = **23 configurations, 0 parameters tuned, 0
+selected for deployment**. Δ, hold, base weights, costs and the decision rule
+were all fixed in the spec before this code existed.
+
+### Artefacts
+
+`scripts/ws8_tilt.py`, `scripts/ws8_replication.py`,
+`scripts/ws8_fetch_universes.py`, `scripts/ws8_charts.py`,
+`reviews/2026-08-01_ws8_results.json`,
+`reviews/2026-08-01_ws8_replication.json`, `reviews/charts/ws8_*.png`,
+technical record `reviews/2026-08-01_ws8_thrust-tilt-deployability.docx`.
+Commit `34e4466`.
+
+### Next
+
+Nothing further on the tilt. If the project continues, the one live thread is
+the S&P 600 result — small-cap breadth carries the stronger signal, and the
+question of whether it is monetisable in a *small-cap* vehicle (rather than as
+an SPX tilt) has not been asked. That needs its own pre-registration and should
+not be bolted onto this one.
+
 *Last updated: 2026-08-01.*

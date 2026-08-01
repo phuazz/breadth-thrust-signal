@@ -200,7 +200,7 @@ def _crossed_up_within(
 # ---------------------------------------------------------------------------
 
 
-def d1_advance_decline(panels: BreadthPanels) -> pd.DataFrame:
+def d1_advance_decline(panels: BreadthPanels, scale: float = 1.0) -> pd.DataFrame:
     """Advance/Decline thrust dimension.
 
     Returns a DataFrame with one boolean column per sub-condition plus a
@@ -225,11 +225,18 @@ def d1_advance_decline(panels: BreadthPanels) -> pd.DataFrame:
 
     # McClellan Oscillator: EMA(19) - EMA(39) of net advances; dip < -50 then
     # cross back above 0 within MCC_RECOVER_WINDOW sessions.
+    #
+    # MCC_OVERSOLD is a COUNT of net advances, not a ratio, so it only means
+    # what it was calibrated to mean on a ~500-name universe. On the Russell
+    # 2000 (~2,000 members) a −50 floor is 2.5% of the universe rather than
+    # 10%, which would make the condition dramatically looser. ``scale``
+    # preserves the economic meaning across universes; it is 1.0 for the S&P
+    # 500 so every filed result is unchanged.
     mcc = (
         net.ewm(span=MCC_FAST, adjust=False).mean()
         - net.ewm(span=MCC_SLOW, adjust=False).mean()
     )
-    was_oversold = (mcc < MCC_OVERSOLD).rolling(
+    was_oversold = (mcc < MCC_OVERSOLD * scale).rolling(
         MCC_RECOVER_WINDOW, min_periods=1
     ).max().astype(bool)
     mcc_thrust = ((mcc > 0) & was_oversold).fillna(False)
@@ -252,7 +259,7 @@ def d2_pct_above_ma(panels: BreadthPanels) -> pd.DataFrame:
     return pd.DataFrame({"pct_above_50dma": thrust, "d2": thrust})
 
 
-def d3_new_high_low(panels: BreadthPanels) -> pd.DataFrame:
+def d3_new_high_low(panels: BreadthPanels, scale: float = 1.0) -> pd.DataFrame:
     """New-high / new-low thrust dimension (OR of two NH/NL expressions)."""
     nh = panels.new_highs
     nl = panels.new_lows
@@ -266,7 +273,10 @@ def d3_new_high_low(panels: BreadthPanels) -> pd.DataFrame:
     was_negative = (net_nh < 0).rolling(
         NET_NH_THRUST_WINDOW, min_periods=1
     ).max().astype(bool)
-    net_thrust = ((net_nh > NET_NH_THRESHOLD) & was_negative).fillna(False)
+    # NET_NH_THRESHOLD is likewise a count, not a ratio — see the note in
+    # d1_advance_decline. 20 net new highs is 4% of a 500-name universe but 1%
+    # of a 2,000-name one. scale is 1.0 for the S&P 500.
+    net_thrust = ((net_nh > NET_NH_THRESHOLD * scale) & was_negative).fillna(False)
 
     out = pd.DataFrame({"nhnl_ratio": ratio_thrust, "net_new_highs": net_thrust})
     out["d3"] = out.any(axis=1)
@@ -297,7 +307,8 @@ class CompositeConfig:
 
 
 def compute_composite(
-    panels: BreadthPanels, config: CompositeConfig | None = None
+    panels: BreadthPanels, config: CompositeConfig | None = None,
+    scale: float = 1.0,
 ) -> pd.DataFrame:
     """Assemble the grouped/weighted conviction score.
 
@@ -319,11 +330,14 @@ def compute_composite(
     config = config or CompositeConfig()
     mem = config.memory_days
 
+    # scale rescales the two COUNT-based thresholds (McClellan floor, net new
+    # highs) for universes of a different size. 1.0 leaves every S&P 500 result
+    # bit-identical; D2 and D4 are ratio-based and need no scaling.
     dims = pd.concat(
         [
-            d1_advance_decline(panels),
+            d1_advance_decline(panels, scale),
             d2_pct_above_ma(panels),
-            d3_new_high_low(panels),
+            d3_new_high_low(panels, scale),
             d4_up_volume(panels),
         ],
         axis=1,

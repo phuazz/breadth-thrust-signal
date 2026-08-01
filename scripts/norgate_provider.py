@@ -63,9 +63,52 @@ DEFAULT_CACHE_ROOT = Path(r"C:\dev\.norgate-store\breadth-thrust-signal")
 def default_cache_root() -> Path:
     return Path(os.environ.get("BREADTH_NORGATE_CACHE", DEFAULT_CACHE_ROOT))
 
+
+def cache_root_for(universe: "Universe") -> Path:
+    """Per-universe cache root.
+
+    The S&P 500 keeps the original location so the filed WS7 run continues to
+    resolve without moving 275MB of vendor data; additional universes get
+    siblings. All of them sit under ``C:\\dev\\`` where the vault ignore rule
+    makes them structurally uncommittable.
+    """
+    base = default_cache_root()
+    return base if universe.slug == SP500.slug else base.parent / f"breadth-{universe.slug}"
+
 INDEX_NAME = "S&P 500"
 WATCHLIST = "S&P 500 Current & Past"
 BENCHMARK = "$SPX"
+
+
+@dataclass(frozen=True)
+class Universe:
+    """An index whose point-in-time breadth can be rebuilt independently.
+
+    WS8 uses the non-S&P-500 entries for cross-sectional replication: the S&P
+    500 window is spent, so a genuinely fresh test of the thrust mechanism has
+    to come from a different cross-section. Breadth measured on a universe
+    trades that universe's own index, so the test is of the mechanism rather
+    than of a cross-market signal.
+    """
+
+    slug: str
+    index_name: str
+    watchlist: str
+    benchmark: str
+    note: str = ""
+
+
+SP500 = Universe("sp500", "S&P 500", "S&P 500 Current & Past", "$SPX")
+R2000 = Universe(
+    "r2000", "Russell 2000", "Russell 2000 Current & Past", "$RUT",
+    "Independent small-cap breadth; ~11k ever-members.",
+)
+SP600 = Universe(
+    "sp600", "S&P SmallCap 600", "S&P SmallCap 600 Current & Past", "$SML",
+    "Second small-cap read. $SML starts 1993-12-31, so the effective window "
+    "opens ~1995 after the 252-day burn-in — shorter than the others.",
+)
+UNIVERSES = {u.slug: u for u in (SP500, R2000, SP600)}
 
 CLOSE_BASIS = "TOTALRETURN"   # direction, MAs, 52-week high/low
 VOLUME_BASIS = "NONE"         # up-volume ratio (raw, unadjusted)
@@ -136,14 +179,17 @@ def ndu_update_time() -> str:
 # ---------------------------------------------------------------------------
 
 
-def resolve_universe() -> list[str]:
-    """Every symbol that has ever been an S&P 500 member, full Norgate keys."""
+def resolve_universe(universe: "Universe" = None) -> list[str]:
+    """Every symbol that has ever been a member, full Norgate keys."""
     import norgatedata as nd
 
-    return list(nd.watchlist_symbols(WATCHLIST))
+    u = universe or SP500
+    return list(nd.watchlist_symbols(u.watchlist))
 
 
-def membership_mask(symbols: list[str], calendar: pd.DatetimeIndex) -> pd.DataFrame:
+def membership_mask(
+    symbols: list[str], calendar: pd.DatetimeIndex, universe: "Universe" = None
+) -> pd.DataFrame:
     """Daily point-in-time membership, dates x symbols, True where a member.
 
     Norgate's flag transitions on the EFFECTIVE date, not the announcement date
@@ -155,11 +201,12 @@ def membership_mask(symbols: list[str], calendar: pd.DatetimeIndex) -> pd.DataFr
     """
     import norgatedata as nd
 
+    u = universe or SP500
     cols = {}
     for sym in symbols:
         try:
             ser = nd.index_constituent_timeseries(
-                sym, INDEX_NAME, timeseriesformat="pandas-dataframe"
+                sym, u.index_name, timeseriesformat="pandas-dataframe"
             )
         except Exception as e:  # noqa: BLE001
             log.warning("  membership unavailable for %s: %s", sym, e)
@@ -279,9 +326,10 @@ def build_panel(root: Path, symbols: list[str]) -> tuple[pd.DataFrame, pd.DataFr
     return close, volume
 
 
-def benchmark_series(root: Path) -> pd.Series:
-    """SPX close on the unadjusted basis, for the forward-return study."""
-    return _read(_cache_path(root, VOLUME_BASIS, BENCHMARK), VOLUME_BASIS)["Close"]
+def benchmark_series(root: Path, universe: "Universe" = None) -> pd.Series:
+    """Index close on the unadjusted basis, for the forward-return study."""
+    u = universe or SP500
+    return _read(_cache_path(root, VOLUME_BASIS, u.benchmark), VOLUME_BASIS)["Close"]
 
 
 # ---------------------------------------------------------------------------

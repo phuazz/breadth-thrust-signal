@@ -115,7 +115,8 @@ static current-member universe and flags survivorship bias loudly.
 ```bash
 pip install -r requirements.txt
 
-# Smoke-test the whole pipeline with synthetic data (no network):
+# Smoke-test the whole pipeline with synthetic data (no network).
+# Renders to data/_selftest/ and docs/_selftest/ — never over the real outputs:
 python scripts/pipeline.py --self-test
 
 # Full run (network-bound; run locally, as breadth-thrust-etf does):
@@ -131,6 +132,10 @@ npx serve docs
 The build injects `data/signals.json` into `template.html` and writes
 `docs/index.html` for GitHub Pages, consistent with the vault dashboard
 architecture (`template.html` is the source; never edit `docs/index.html`).
+The self-test runs that identical render path but into `data/_selftest/` and
+`docs/_selftest/` (both gitignored), so a synthetic run cannot overwrite the
+filed study record or the published dashboard. `tests/test_pipeline_outputs.py`
+enforces this.
 
 ---
 

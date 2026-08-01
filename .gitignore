@@ -13,3 +13,6 @@ data/panel_cache.json
 data/norgate/
 # Local Claude Code permission grants — machine-specific, not for the repo.
 .claude/settings.local.json
+# Synthetic --self-test output. Fabricated numbers; never the filed record.
+data/_selftest/
+docs/_selftest/

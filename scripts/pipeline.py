@@ -4,7 +4,7 @@ Canonical build entry point (per vault convention: pipeline.py, not build.py):
 
     python scripts/pipeline.py                 # full run, render dashboard
     python scripts/pipeline.py --no-fetch      # recompute from cached panel only
-    python scripts/pipeline.py --self-test     # synthetic end-to-end smoke test
+    python scripts/pipeline.py --self-test     # synthetic smoke test -> scratch dirs
 
 Stages
 ------
@@ -14,6 +14,8 @@ Stages
 3. Build breadth panels -> grouped/weighted composite (compute_breadth).
 4. Conditional forward-return study with bootstrap baseline (forward_returns).
 5. Emit data/signals.json and inject it into template.html -> docs/index.html.
+   Under --self-test these go to data/_selftest/ and docs/_selftest/ instead:
+   the synthetic run must never overwrite the filed record or the live page.
 
 The heavy constituent fetch is network-bound; run it locally. CI can run with
 --no-fetch against a committed panel cache, matching breadth-thrust-etf.
@@ -42,6 +44,14 @@ from data_providers import PanelCache  # noqa: E402
 DATA = ROOT / "data"
 DOCS = ROOT / "docs"
 TEMPLATE = ROOT / "template.html"
+
+# --self-test renders into scratch directories, NEVER the canonical outputs.
+# data/signals.json is the filed study record that later workstreams reconcile
+# against, and docs/index.html is what GitHub Pages serves; a synthetic run that
+# overwrote either would destroy real work with fabricated numbers, silently and
+# irrecoverably on a dirty tree. Both are gitignored.
+SELFTEST_DATA = DATA / "_selftest"
+SELFTEST_DOCS = DOCS / "_selftest"
 
 BENCHMARK = "^GSPC"           # SPX level for the forward-return study
 START = "1999-01-01"          # burn-in for 252-day lookbacks
@@ -333,21 +343,29 @@ def build_payload(composite, spx, survivorship_bias, data_quality=None, panels=N
     }
 
 
-def render(payload: dict) -> None:
-    DOCS.mkdir(exist_ok=True)
+def render(payload: dict, data_dir: Path = DATA, docs_dir: Path = DOCS) -> None:
+    """Write signals.json and the injected dashboard.
+
+    Destinations are parameters, not constants, so the synthetic self-test can
+    exercise the identical render path against scratch directories without
+    touching the canonical record (see SELFTEST_DATA / SELFTEST_DOCS).
+    """
+    docs_dir.mkdir(parents=True, exist_ok=True)
+    data_dir.mkdir(parents=True, exist_ok=True)
     blob = json.dumps(payload, separators=(",", ":"))
     if TEMPLATE.exists():
         html = TEMPLATE.read_text(encoding="utf-8")
         # Replace ONLY the first occurrence — the data-island placeholder. The
-        # token also appears a second time as the sentinel in the JS fetch-
-        # fallback check (`if (raw === "__SIGNALS_JSON__")`); injecting the blob
-        # there too would splice JSON into a string literal and break the whole
-        # inline script. count=1 leaves the sentinel intact.
+        # JS fetch-fallback check compares against the same token, and injecting
+        # the blob there too would splice JSON into a string literal and break
+        # the whole inline script. The template writes that sentinel split
+        # (`"__SIGNALS" + "_JSON__"`) so it cannot match; count=1 is the second
+        # line of defence if that hardening is ever undone.
         html = html.replace("__SIGNALS_JSON__", blob, 1)
-        (DOCS / "index.html").write_text(html, encoding="utf-8")
-        log.info("Wrote %s", DOCS / "index.html")
-    (DATA / "signals.json").write_text(json.dumps(payload, indent=2), encoding="utf-8")
-    log.info("Wrote %s", DATA / "signals.json")
+        (docs_dir / "index.html").write_text(html, encoding="utf-8")
+        log.info("Wrote %s", docs_dir / "index.html")
+    (data_dir / "signals.json").write_text(json.dumps(payload, indent=2), encoding="utf-8")
+    log.info("Wrote %s", data_dir / "signals.json")
 
 
 # ---------------------------------------------------------------------------
@@ -385,9 +403,15 @@ def main() -> int:
 
     if args.self_test:
         payload = synthetic_run()
-        render(payload)
+        # Scratch destinations, deliberately. The self-test still runs the full
+        # render path end to end; it simply may not write over the filed record
+        # or the published dashboard.
+        render(payload, data_dir=SELFTEST_DATA, docs_dir=SELFTEST_DOCS)
         c = payload["current"]
         log.info("Self-test OK — as of %s, %d/4 dimensions on", c["as_of"], c["n_dimensions"])
+        log.info("Synthetic output written to %s and %s; canonical %s and %s untouched.",
+                 SELFTEST_DATA / "signals.json", SELFTEST_DOCS / "index.html",
+                 DATA / "signals.json", DOCS / "index.html")
         return 0
 
     # Resolve universe for fetch.

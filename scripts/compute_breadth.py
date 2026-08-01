@@ -106,6 +106,15 @@ class BreadthPanels:
     new_highs: pd.Series         # count at 252-day high
     new_lows: pd.Series          # count at 252-day low
     up_volume_ratio: pd.Series   # up-volume / total volume in [0, 1]
+    # Constituents whose rolling windows are actually populated. These are NOT
+    # the same as valid_count: a name needs PCT50_MA_WINDOW days of history
+    # before it can be above or below its 50-day average, and HL_LOOKBACK days
+    # before it can print a 52-week high or low. new_highs is a .sum() of a
+    # boolean, so during burn-in it reads 0 rather than NaN — indistinguishable
+    # from a genuine "no new highs today" unless the population is tracked
+    # separately. That is why these two series exist.
+    ma_valid_count: pd.Series
+    hl_valid_count: pd.Series
 
 
 def build_panels(adj_close: pd.DataFrame, volume: pd.DataFrame) -> BreadthPanels:
@@ -161,6 +170,8 @@ def build_panels(adj_close: pd.DataFrame, volume: pd.DataFrame) -> BreadthPanels
         new_highs=new_highs,
         new_lows=new_lows,
         up_volume_ratio=up_volume_ratio,
+        ma_valid_count=ma_valid.sum(axis=1).astype(float),
+        hl_valid_count=hl_valid.sum(axis=1).astype(float),
     )
 
 
@@ -341,7 +352,26 @@ def compute_composite(
     df["event"] = (df["n_dimensions"] > df["n_dimensions"].shift(1).fillna(0)).astype(bool)
 
     df["valid_count"] = panels.valid_count
-    df["data_ok"] = panels.valid_count >= MIN_VALID_CONSTITUENTS
+
+    # Breadth is only trustworthy once EVERY dimension is capable of firing.
+    # D2 needs PCT50_MA_WINDOW observations before its moving average exists and
+    # D3 needs HL_LOOKBACK before 52-week highs/lows do, so for the first year
+    # of any panel the score is mechanically capped at 2 — D1 and D4 only. Days
+    # in that burn-in are not "score 2 days", they are "score unknown" days, and
+    # admitting them to the study manufactures low-conviction events that could
+    # never have been high-conviction ones.
+    #
+    # Confirmed in the filed Phase 0 record (WS7, 2026-08-01): D3 first fires
+    # 2019-01-10, two trading days after the 252-day boundary at 2019-01-08, and
+    # 4 of its 26 events sit inside the burn-in. Effect on the headline was
+    # small — the 6-month win rate falls 2.1pp at >=1 and 1.4pp at >=2, and the
+    # conviction inversion survives — but the defect is structural, not a
+    # judgement call, so the gate is enforced here rather than by convention.
+    computable = (panels.ma_valid_count >= MIN_VALID_CONSTITUENTS) & (
+        panels.hl_valid_count >= MIN_VALID_CONSTITUENTS
+    )
+    df["burn_in"] = ~computable
+    df["data_ok"] = (panels.valid_count >= MIN_VALID_CONSTITUENTS) & computable
 
     return df
 

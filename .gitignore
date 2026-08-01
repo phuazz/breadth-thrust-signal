@@ -6,5 +6,10 @@ pytest-cache-files-*/
 venv/
 # Large cached panels are regenerated locally; keep the repo light.
 data/panel_cache.json
+# Norgate vendor series. The licence is personal-use-only and this repo is
+# PUBLIC — vendor values must never be committed anywhere. The cache default
+# lives outside the repo entirely (see norgate_provider.default_cache_root);
+# this entry only covers the case where someone points it back in here.
+data/norgate/
 # Local Claude Code permission grants — machine-specific, not for the repo.
 .claude/settings.local.json

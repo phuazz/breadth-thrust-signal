@@ -195,4 +195,10 @@ def lift_table(conditional: pd.DataFrame, baseline: pd.DataFrame) -> pd.DataFram
     # Is the conditional win rate above the 95th-percentile of the baseline
     # band? A coarse "beyond noise" flag.
     merged["win_beyond_noise"] = merged["win_rate"] > merged["base_win_hi"]
+    # The same bar applied to the median. Phase 0 required the median to be
+    # "meaningfully above unconditional" without defining the threshold, which
+    # left the decision to be made after seeing the number. WS7 pre-registers
+    # it as the 95th percentile of the bootstrap median distribution, symmetric
+    # with the win-rate test (KICKOFF_ws7, sign-off item 2).
+    merged["ret_beyond_noise"] = merged["median_ret"] > merged["base_ret_hi"]
     return merged

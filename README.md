@@ -176,17 +176,54 @@ met and conviction-monotonicity is inverted. Treat as suggestive, **not** a
 confirmed standalone ≥3 timing trigger. Do not wire into `equity-defense-
 dashboard` on this evidence alone.
 
+## ERRATUM to the first-run findings (added 2026-08-01, WS7)
+
+The findings above stand as filed and are **not** superseded, but two
+corrections apply. Both were established in WS7 (`RESEARCH_MEMO.md`;
+`reviews/2026-08-01_ws7_norgate-history-extension.docx`).
+
+1. **Burn-in defect.** The validity gate admitted days on which D2 and D3 were
+   mechanically incapable of firing — D2 needs 50 sessions before a 50-day
+   average exists, D3 needs 252 before a 52-week high does — so the score was
+   capped at 2 for the first year of the panel. D3 first fires 2019-01-10, two
+   trading days after the 252-day boundary at 2019-01-08, and **4 of the 26
+   events above sit inside that window**. Correcting it moves the 6-month win
+   rate by −2.1pp at ≥1 and −1.4pp at ≥2, and not at all at ≥3 or ≥4. The
+   conviction inversion survives the correction. `data_ok` now requires every
+   dimension to be computable.
+2. **The event set is substantially a property of the data layer.** Rerunning
+   the same calendar window on daily point-in-time membership with delisted
+   names restored leaves **only 16 of the 26 events intact**. At ≥3 both runs
+   carry n=14 but only 7 dates coincide, moving the 12-month median from
+   +23.05% to +13.28%. The benchmark series is not the cause (0.12% maximum
+   difference). The cause is the weekly-snapshot membership and the Yahoo
+   delisted gap, both listed as known caveats below.
+
+**What WS7 changes about the verdict.** The ≥3 / 6-month criterion was tested
+on a held-out 1990–2017 window and **failed there too**, so it is now formally
+rejected rather than merely unconfirmed. Conversely, the inverted conviction
+ordering reported above did **not** reproduce out of sample (rank correlation
++0.40 held-out against the negative ordering here) — that inversion was an
+eight-year artefact and the four-dimension grouping is vindicated.
+
 ## Known caveats / next steps
 
-- **Residual data-layer leak.** Membership is survivorship-correct, but 111 of
-  715 ever-members were delisted/renamed beyond Yahoo's reach and cannot be
-  fetched, so they drop from historical breadth (surfaced in `signals.json`
-  `data_quality` and the dashboard scope banner). Delisted names skew weak, so
-  their absence mildly understates past declines.
-- **Pre-2018 point-in-time membership is unresolved.** Extending before 2018
-  needs a reconstructed historical membership list and would be lower-confidence.
-- **Small-sample power.** Eight years yields too few fresh events to confirm a
-  ≥3 edge. Re-evaluate as the window lengthens, or test whether the cleaner
-  ≥1/≥2 6-month signal is the more honest object of study.
+- **Residual data-layer leak.** *(RESOLVED for the Norgate layer, 2026-08-01.)*
+  Under the Yahoo path, 111 of 715 ever-members were delisted/renamed beyond
+  reach and dropped from historical breadth. Norgate carries all 646 delisted
+  ever-members with full history, and member-with-price coverage is complete on
+  every sampled date. The caveat still applies to any run on the legacy panel
+  cache.
+- **Pre-2018 point-in-time membership is unresolved.** *(CLOSED 2026-08-01,
+  WS7.)* The assumption that this needed a reconstructed membership list was
+  wrong. Norgate resolves daily survivorship-free S&P 500 membership from
+  1990-01-02; the effective study window is now 1990-12-28 → 2026-07-31, 8,961
+  usable days against 2,109.
+- **Small-sample power.** *(ADDRESSED, and the answer was negative.)* On 4.25×
+  the data the ≥3 edge does not confirm — it fails the pre-registered rule out
+  of sample. The ≥3 signal does clear both legs at the 1-month and 12-month
+  horizons in both windows, but that was not the pre-registered horizon and is
+  flagged without action; claiming it would require its own pre-registration on
+  data not yet spent.
 
-*Last updated: 2026-06-01*
+*Last updated: 2026-08-01*

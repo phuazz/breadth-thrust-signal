@@ -16,3 +16,4 @@ data/norgate/
 # Synthetic --self-test output. Fabricated numbers; never the filed record.
 data/_selftest/
 docs/_selftest/
+data_local/

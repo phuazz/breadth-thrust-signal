@@ -1,0 +1,2011 @@
+{
+ "pairs": {
+  "P1_zweig": {
+   "n": 9211,
+   "start": "1990-01-03",
+   "end": "2026-07-31",
+   "unit_note": "EMA10 advance ratio, fraction (vendor scale detected /1)",
+   "corr_levels": 0.8474,
+   "corr_daily_changes": 0.6905,
+   "median_signed_diff": -0.0024,
+   "p95_abs_diff": 0.0747,
+   "scale_ratio_vendor_over_self": 0.9927,
+   "zweig_thrust_events": {
+    "n_self": 51,
+    "n_vendor": 38,
+    "matched": 24,
+    "pairs": [
+     {
+      "self": "1990-05-08",
+      "vendor": "1990-05-08",
+      "tday_delta": 0
+     },
+     {
+      "self": "1996-08-02",
+      "vendor": "1996-08-06",
+      "tday_delta": 2
+     },
+     {
+      "self": "1996-09-13",
+      "vendor": "1996-09-16",
+      "tday_delta": 1
+     },
+     {
+      "self": "2002-10-21",
+      "vendor": "2002-10-21",
+      "tday_delta": 0
+     },
+     {
+      "self": "2004-04-02",
+      "vendor": "2004-04-05",
+      "tday_delta": 1
+     },
+     {
+      "self": "2009-03-17",
+      "vendor": "2009-03-17",
+      "tday_delta": 0
+     },
+     {
+      "self": "2009-10-14",
+      "vendor": "2009-10-15",
+      "tday_delta": 1
+     },
+     {
+      "self": "2009-11-09",
+      "vendor": "2009-11-11",
+      "tday_delta": 2
+     },
+     {
+      "self": "2010-07-13",
+      "vendor": "2010-07-15",
+      "tday_delta": 2
+     },
+     {
+      "self": "2010-09-03",
+      "vendor": "2010-09-10",
+      "tday_delta": 4
+     },
+     {
+      "self": "2011-10-10",
+      "vendor": "2011-10-14",
+      "tday_delta": 4
+     },
+     {
+      "self": "2011-12-23",
+      "vendor": "2011-12-29",
+      "tday_delta": 3
+     },
+     {
+      "self": "2012-11-23",
+      "vendor": "2012-11-29",
+      "tday_delta": 4
+     },
+     {
+      "self": "2013-07-08",
+      "vendor": "2013-07-08",
+      "tday_delta": 0
+     },
+     {
+      "self": "2014-02-11",
+      "vendor": "2014-02-14",
+      "tday_delta": 3
+     },
+     {
+      "self": "2014-08-19",
+      "vendor": "2014-08-19",
+      "tday_delta": 0
+     },
+     {
+      "self": "2014-10-21",
+      "vendor": "2014-10-24",
+      "tday_delta": 3
+     },
+     {
+      "self": "2014-12-23",
+      "vendor": "2014-12-29",
+      "tday_delta": 3
+     },
+     {
+      "self": "2015-12-23",
+      "vendor": "2015-12-29",
+      "tday_delta": 3
+     },
+     {
+      "self": "2018-02-15",
+      "vendor": "2018-02-23",
+      "tday_delta": 5
+     },
+     {
+      "self": "2019-01-08",
+      "vendor": "2019-01-08",
+      "tday_delta": 0
+     },
+     {
+      "self": "2019-06-07",
+      "vendor": "2019-06-12",
+      "tday_delta": 3
+     },
+     {
+      "self": "2022-10-25",
+      "vendor": "2022-10-25",
+      "tday_delta": 0
+     },
+     {
+      "self": "2023-11-03",
+      "vendor": "2023-11-10",
+      "tday_delta": 5
+     }
+    ],
+    "unmatched_self": [
+     "2003-03-21",
+     "2003-10-07",
+     "2003-12-01",
+     "2009-07-15",
+     "2009-09-09",
+     "2009-09-14",
+     "2010-02-18",
+     "2010-06-15",
+     "2010-09-10",
+     "2011-06-21",
+     "2011-08-29",
+     "2011-09-15",
+     "2011-10-12",
+     "2011-10-14",
+     "2012-03-13",
+     "2012-06-15",
+     "2013-09-10",
+     "2013-10-17",
+     "2013-10-22",
+     "2014-10-23",
+     "2015-10-05",
+     "2015-10-07",
+     "2018-11-07",
+     "2020-05-27",
+     "2020-10-05",
+     "2022-09-12",
+     "2023-08-30"
+    ],
+    "unmatched_vendor": [
+     "1990-05-11",
+     "1991-01-28",
+     "2001-10-05",
+     "2002-10-23",
+     "2008-12-05",
+     "2009-11-13",
+     "2010-07-19",
+     "2011-03-30",
+     "2011-06-29",
+     "2011-12-09",
+     "2013-12-26",
+     "2022-02-09",
+     "2022-05-27",
+     "2023-10-17"
+    ]
+   }
+  },
+  "P1b_zweig_decomposition": {
+   "corr_self_vs_from_counts": 0.9987,
+   "corr_zwbt_vs_from_counts": 0.849,
+   "corr_zwbt_vs_unch_incl": 0.8079,
+   "median_zwbt_minus_from_counts": 0.0,
+   "median_zwbt_minus_unch_incl": 0.0166,
+   "note": "if self\u2248from_counts but zwbt\u2249from_counts, the packaged ZWBT uses a different formula and the correct vendor guard for the Zweig leg is EMA10 of #SPXADV/#SPXDEC, not #SPXZWBT"
+  },
+  "P2_mcclellan": {
+   "n": 9212,
+   "start": "1990-01-02",
+   "end": "2026-07-31",
+   "unit_note": "self RAW net-advance EMA19-EMA39; vendor basis detected via scale ratio",
+   "corr_levels": 0.9982,
+   "corr_daily_changes": 0.9992,
+   "median_signed_diff": 0.7535,
+   "p95_abs_diff": 41.8335,
+   "scale_ratio_vendor_over_self": 2.0497,
+   "verdict_hint": "DEFINITIONALLY DIFFERENT (probable ratio-adjusted vendor) \u2014 level guard unusable at the deployed -50 count threshold"
+  },
+  "P3_advances": {
+   "n": 9212,
+   "start": "1990-01-02",
+   "end": "2026-07-31",
+   "unit_note": "daily count",
+   "corr_levels": 0.9992,
+   "corr_daily_changes": 0.9996,
+   "median_signed_diff": -1.0,
+   "p95_abs_diff": 5.0,
+   "scale_ratio_vendor_over_self": 0.9959
+  },
+  "P3_declines": {
+   "n": 9212,
+   "start": "1990-01-02",
+   "end": "2026-07-31",
+   "unit_note": "daily count",
+   "corr_levels": 0.9999,
+   "corr_daily_changes": 0.9999,
+   "median_signed_diff": 1.0,
+   "p95_abs_diff": 4.0,
+   "scale_ratio_vendor_over_self": 1.0043
+  },
+  "P3_deemer_1p90": {
+   "day_flag_agreement": 0.9991,
+   "episodes": {
+    "n_self": 67,
+    "n_vendor": 65,
+    "matched": 63,
+    "pairs": [
+     {
+      "self": "1990-05-11",
+      "vendor": "1990-05-11",
+      "tday_delta": 0
+     },
+     {
+      "self": "1991-02-05",
+      "vendor": "1991-02-06",
+      "tday_delta": 1
+     },
+     {
+      "self": "1991-02-11",
+      "vendor": "1991-02-11",
+      "tday_delta": 0
+     },
+     {
+      "self": "1991-12-31",
+      "vendor": "1991-12-31",
+      "tday_delta": 0
+     },
+     {
+      "self": "1997-05-05",
+      "vendor": "1997-05-05",
+      "tday_delta": 0
+     },
+     {
+      "self": "1997-05-09",
+      "vendor": "1997-05-09",
+      "tday_delta": 0
+     },
+     {
+      "self": "2002-08-19",
+      "vendor": "2002-08-19",
+      "tday_delta": 0
+     },
+     {
+      "self": "2002-10-23",
+      "vendor": "2002-10-23",
+      "tday_delta": 0
+     },
+     {
+      "self": "2003-03-25",
+      "vendor": "2003-03-25",
+      "tday_delta": 0
+     },
+     {
+      "self": "2003-06-04",
+      "vendor": "2003-06-04",
+      "tday_delta": 0
+     },
+     {
+      "self": "2003-10-14",
+      "vendor": "2003-10-14",
+      "tday_delta": 0
+     },
+     {
+      "self": "2004-11-05",
+      "vendor": "2004-11-05",
+      "tday_delta": 0
+     },
+     {
+      "self": "2008-12-05",
+      "vendor": "2008-12-05",
+      "tday_delta": 0
+     },
+     {
+      "self": "2009-03-23",
+      "vendor": "2009-03-23",
+      "tday_delta": 0
+     },
+     {
+      "self": "2009-07-21",
+      "vendor": "2009-07-21",
+      "tday_delta": 0
+     },
+     {
+      "self": "2009-09-16",
+      "vendor": "2009-09-16",
+      "tday_delta": 0
+     },
+     {
+      "self": "2010-03-11",
+      "vendor": "2010-03-11",
+      "tday_delta": 0
+     },
+     {
+      "self": "2010-07-20",
+      "vendor": "2010-07-20",
+      "tday_delta": 0
+     },
+     {
+      "self": "2010-09-14",
+      "vendor": "2010-09-14",
+      "tday_delta": 0
+     },
+     {
+      "self": "2011-03-30",
+      "vendor": "2011-03-30",
+      "tday_delta": 0
+     },
+     {
+      "self": "2011-07-01",
+      "vendor": "2011-07-01",
+      "tday_delta": 0
+     },
+     {
+      "self": "2011-07-07",
+      "vendor": "2011-07-07",
+      "tday_delta": 0
+     },
+     {
+      "self": "2011-10-18",
+      "vendor": "2011-10-18",
+      "tday_delta": 0
+     },
+     {
+      "self": "2013-03-11",
+      "vendor": "2013-03-11",
+      "tday_delta": 0
+     },
+     {
+      "self": "2013-03-14",
+      "vendor": "2013-03-14",
+      "tday_delta": 0
+     },
+     {
+      "self": "2013-05-15",
+      "vendor": "2013-05-15",
+      "tday_delta": 0
+     },
+     {
+      "self": "2013-07-09",
+      "vendor": "2013-07-09",
+      "tday_delta": 0
+     },
+     {
+      "self": "2013-07-15",
+      "vendor": "2013-07-15",
+      "tday_delta": 0
+     },
+     {
+      "self": "2013-07-18",
+      "vendor": "2013-07-18",
+      "tday_delta": 0
+     },
+     {
+      "self": "2013-09-16",
+      "vendor": "2013-09-16",
+      "tday_delta": 0
+     },
+     {
+      "self": "2013-10-22",
+      "vendor": "2013-10-22",
+      "tday_delta": 0
+     },
+     {
+      "self": "2013-12-30",
+      "vendor": "2013-12-30",
+      "tday_delta": 0
+     },
+     {
+      "self": "2014-02-18",
+      "vendor": "2014-02-18",
+      "tday_delta": 0
+     },
+     {
+      "self": "2014-06-04",
+      "vendor": "2014-06-06",
+      "tday_delta": 2
+     },
+     {
+      "self": "2014-08-21",
+      "vendor": "2014-08-21",
+      "tday_delta": 0
+     },
+     {
+      "self": "2014-10-27",
+      "vendor": "2014-10-27",
+      "tday_delta": 0
+     },
+     {
+      "self": "2014-11-05",
+      "vendor": "2014-11-05",
+      "tday_delta": 0
+     },
+     {
+      "self": "2014-11-10",
+      "vendor": "2014-11-10",
+      "tday_delta": 0
+     },
+     {
+      "self": "2015-10-12",
+      "vendor": "2015-10-12",
+      "tday_delta": 0
+     },
+     {
+      "self": "2016-02-26",
+      "vendor": "2016-02-26",
+      "tday_delta": 0
+     },
+     {
+      "self": "2016-07-11",
+      "vendor": "2016-07-11",
+      "tday_delta": 0
+     },
+     {
+      "self": "2017-06-01",
+      "vendor": "2017-06-01",
+      "tday_delta": 0
+     },
+     {
+      "self": "2018-11-07",
+      "vendor": "2018-11-07",
+      "tday_delta": 0
+     },
+     {
+      "self": "2019-01-09",
+      "vendor": "2019-01-09",
+      "tday_delta": 0
+     },
+     {
+      "self": "2019-01-17",
+      "vendor": "2019-01-17",
+      "tday_delta": 0
+     },
+     {
+      "self": "2019-09-09",
+      "vendor": "2019-09-09",
+      "tday_delta": 0
+     },
+     {
+      "self": "2020-06-05",
+      "vendor": "2020-06-05",
+      "tday_delta": 0
+     },
+     {
+      "self": "2020-10-07",
+      "vendor": "2020-10-07",
+      "tday_delta": 0
+     },
+     {
+      "self": "2022-01-04",
+      "vendor": "2022-01-04",
+      "tday_delta": 0
+     },
+     {
+      "self": "2022-03-25",
+      "vendor": "2022-03-25",
+      "tday_delta": 0
+     },
+     {
+      "self": "2022-07-28",
+      "vendor": "2022-07-28",
+      "tday_delta": 0
+     },
+     {
+      "self": "2022-08-01",
+      "vendor": "2022-08-01",
+      "tday_delta": 0
+     },
+     {
+      "self": "2022-08-16",
+      "vendor": "2022-08-16",
+      "tday_delta": 0
+     },
+     {
+      "self": "2022-10-28",
+      "vendor": "2022-10-28",
+      "tday_delta": 0
+     },
+     {
+      "self": "2023-03-31",
+      "vendor": "2023-03-31",
+      "tday_delta": 0
+     },
+     {
+      "self": "2023-11-24",
+      "vendor": "2023-11-24",
+      "tday_delta": 0
+     },
+     {
+      "self": "2024-05-15",
+      "vendor": "2024-05-15",
+      "tday_delta": 0
+     },
+     {
+      "self": "2024-08-19",
+      "vendor": "2024-08-19",
+      "tday_delta": 0
+     },
+     {
+      "self": "2024-08-21",
+      "vendor": "2024-08-21",
+      "tday_delta": 0
+     },
+     {
+      "self": "2024-08-26",
+      "vendor": "2024-08-26",
+      "tday_delta": 0
+     },
+     {
+      "self": "2025-01-27",
+      "vendor": "2025-01-27",
+      "tday_delta": 0
+     },
+     {
+      "self": "2025-05-05",
+      "vendor": "2025-05-05",
+      "tday_delta": 0
+     },
+     {
+      "self": "2025-07-03",
+      "vendor": "2025-07-03",
+      "tday_delta": 0
+     }
+    ],
+    "unmatched_self": [
+     "2012-06-19",
+     "2014-06-06",
+     "2019-06-14",
+     "2019-10-22"
+    ],
+    "unmatched_vendor": [
+     "2014-02-20",
+     "2019-09-11"
+    ]
+   }
+  },
+  "P4_pct_above_50dma": {
+   "n": 9163,
+   "start": "1990-03-13",
+   "end": "2026-07-31",
+   "unit_note": "fraction above 50d MA (vendor scale detected /100; self TR-close basis, vendor basis per vendor)",
+   "corr_levels": 0.9993,
+   "corr_daily_changes": 0.9926,
+   "median_signed_diff": -0.012,
+   "p95_abs_diff": 0.0266,
+   "scale_ratio_vendor_over_self": 0.9744,
+   "pct50_thrust_events": {
+    "n_self": 17,
+    "n_vendor": 19,
+    "matched": 13,
+    "pairs": [
+     {
+      "self": "1997-05-05",
+      "vendor": "1997-05-05",
+      "tday_delta": 0
+     },
+     {
+      "self": "2000-04-03",
+      "vendor": "2000-04-03",
+      "tday_delta": 0
+     },
+     {
+      "self": "2009-04-02",
+      "vendor": "2009-04-02",
+      "tday_delta": 0
+     },
+     {
+      "self": "2011-07-07",
+      "vendor": "2011-07-07",
+      "tday_delta": 0
+     },
+     {
+      "self": "2011-10-14",
+      "vendor": "2011-10-14",
+      "tday_delta": 0
+     },
+     {
+      "self": "2011-10-18",
+      "vendor": "2011-10-18",
+      "tday_delta": 0
+     },
+     {
+      "self": "2011-10-20",
+      "vendor": "2011-10-21",
+      "tday_delta": 1
+     },
+     {
+      "self": "2011-11-30",
+      "vendor": "2011-11-30",
+      "tday_delta": 0
+     },
+     {
+      "self": "2014-11-03",
+      "vendor": "2014-11-06",
+      "tday_delta": 3
+     },
+     {
+      "self": "2016-03-03",
+      "vendor": "2016-03-03",
+      "tday_delta": 0
+     },
+     {
+      "self": "2016-07-11",
+      "vendor": "2016-07-12",
+      "tday_delta": 1
+     },
+     {
+      "self": "2020-04-29",
+      "vendor": "2020-04-29",
+      "tday_delta": 0
+     },
+     {
+      "self": "2022-07-29",
+      "vendor": "2022-07-29",
+      "tday_delta": 0
+     }
+    ],
+    "unmatched_self": [
+     "2003-03-21",
+     "2014-11-05",
+     "2020-05-08",
+     "2022-08-03"
+    ],
+    "unmatched_vendor": [
+     "1990-05-15",
+     "1997-05-09",
+     "2009-01-02",
+     "2009-07-20",
+     "2011-12-05",
+     "2020-10-12"
+    ]
+   }
+  },
+  "P5_new_highs": {
+   "n": 9212,
+   "start": "1990-01-02",
+   "end": "2026-07-31",
+   "unit_note": "52W new-high count (self TR-close basis)",
+   "corr_levels": 0.982,
+   "corr_daily_changes": 0.9852,
+   "median_signed_diff": -2.0,
+   "p95_abs_diff": 13.0,
+   "scale_ratio_vendor_over_self": 0.85
+  },
+  "P5_new_lows": {
+   "n": 9212,
+   "start": "1990-01-02",
+   "end": "2026-07-31",
+   "unit_note": "52W new-low count (self TR-close basis)",
+   "corr_levels": 0.9496,
+   "corr_daily_changes": 0.9696,
+   "median_signed_diff": 0.0,
+   "p95_abs_diff": 6.0,
+   "scale_ratio_vendor_over_self": 1.0
+  },
+  "P5_nhnl_ratio_events": {
+   "n_self": 270,
+   "n_vendor": 304,
+   "matched": 246,
+   "pairs": [
+    {
+     "self": "1991-01-17",
+     "vendor": "1991-01-17",
+     "tday_delta": 0
+    },
+    {
+     "self": "1991-11-27",
+     "vendor": "1991-12-02",
+     "tday_delta": 2
+    },
+    {
+     "self": "1991-12-02",
+     "vendor": "1991-12-06",
+     "tday_delta": 4
+    },
+    {
+     "self": "1992-04-10",
+     "vendor": "1992-04-10",
+     "tday_delta": 0
+    },
+    {
+     "self": "1992-10-12",
+     "vendor": "1992-10-12",
+     "tday_delta": 0
+    },
+    {
+     "self": "1992-10-15",
+     "vendor": "1992-10-15",
+     "tday_delta": 0
+    },
+    {
+     "self": "1994-04-29",
+     "vendor": "1994-04-29",
+     "tday_delta": 0
+    },
+    {
+     "self": "1994-05-17",
+     "vendor": "1994-05-18",
+     "tday_delta": 1
+    },
+    {
+     "self": "1994-10-10",
+     "vendor": "1994-10-10",
+     "tday_delta": 0
+    },
+    {
+     "self": "1994-12-14",
+     "vendor": "1994-12-15",
+     "tday_delta": 1
+    },
+    {
+     "self": "1994-12-16",
+     "vendor": "1994-12-21",
+     "tday_delta": 3
+    },
+    {
+     "self": "1996-07-31",
+     "vendor": "1996-08-01",
+     "tday_delta": 1
+    },
+    {
+     "self": "1997-04-16",
+     "vendor": "1997-04-18",
+     "tday_delta": 2
+    },
+    {
+     "self": "1997-04-18",
+     "vendor": "1997-04-22",
+     "tday_delta": 2
+    },
+    {
+     "self": "1997-10-31",
+     "vendor": "1997-10-31",
+     "tday_delta": 0
+    },
+    {
+     "self": "1998-01-13",
+     "vendor": "1998-01-13",
+     "tday_delta": 0
+    },
+    {
+     "self": "1998-09-22",
+     "vendor": "1998-09-23",
+     "tday_delta": 1
+    },
+    {
+     "self": "1998-10-15",
+     "vendor": "1998-10-15",
+     "tday_delta": 0
+    },
+    {
+     "self": "1999-03-25",
+     "vendor": "1999-03-25",
+     "tday_delta": 0
+    },
+    {
+     "self": "1999-03-29",
+     "vendor": "1999-03-29",
+     "tday_delta": 0
+    },
+    {
+     "self": "1999-04-01",
+     "vendor": "1999-04-01",
+     "tday_delta": 0
+    },
+    {
+     "self": "1999-10-04",
+     "vendor": "1999-10-04",
+     "tday_delta": 0
+    },
+    {
+     "self": "1999-10-06",
+     "vendor": "1999-10-06",
+     "tday_delta": 0
+    },
+    {
+     "self": "1999-10-28",
+     "vendor": "1999-10-28",
+     "tday_delta": 0
+    },
+    {
+     "self": "2000-01-06",
+     "vendor": "2000-01-06",
+     "tday_delta": 0
+    },
+    {
+     "self": "2000-01-12",
+     "vendor": "2000-01-13",
+     "tday_delta": 1
+    },
+    {
+     "self": "2000-03-16",
+     "vendor": "2000-03-16",
+     "tday_delta": 0
+    },
+    {
+     "self": "2000-04-19",
+     "vendor": "2000-04-19",
+     "tday_delta": 0
+    },
+    {
+     "self": "2001-03-27",
+     "vendor": "2001-03-27",
+     "tday_delta": 0
+    },
+    {
+     "self": "2001-03-30",
+     "vendor": "2001-04-05",
+     "tday_delta": 4
+    },
+    {
+     "self": "2001-04-05",
+     "vendor": "2001-04-10",
+     "tday_delta": 3
+    },
+    {
+     "self": "2001-09-28",
+     "vendor": "2001-09-28",
+     "tday_delta": 0
+    },
+    {
+     "self": "2001-10-03",
+     "vendor": "2001-10-03",
+     "tday_delta": 0
+    },
+    {
+     "self": "2001-11-05",
+     "vendor": "2001-11-05",
+     "tday_delta": 0
+    },
+    {
+     "self": "2002-01-03",
+     "vendor": "2002-01-03",
+     "tday_delta": 0
+    },
+    {
+     "self": "2002-06-17",
+     "vendor": "2002-06-17",
+     "tday_delta": 0
+    },
+    {
+     "self": "2002-06-28",
+     "vendor": "2002-06-28",
+     "tday_delta": 0
+    },
+    {
+     "self": "2002-08-15",
+     "vendor": "2002-08-15",
+     "tday_delta": 0
+    },
+    {
+     "self": "2002-08-19",
+     "vendor": "2002-08-19",
+     "tday_delta": 0
+    },
+    {
+     "self": "2002-08-21",
+     "vendor": "2002-08-21",
+     "tday_delta": 0
+    },
+    {
+     "self": "2002-09-10",
+     "vendor": "2002-09-10",
+     "tday_delta": 0
+    },
+    {
+     "self": "2002-10-15",
+     "vendor": "2002-10-15",
+     "tday_delta": 0
+    },
+    {
+     "self": "2002-10-17",
+     "vendor": "2002-10-21",
+     "tday_delta": 2
+    },
+    {
+     "self": "2002-10-21",
+     "vendor": "2002-10-23",
+     "tday_delta": 2
+    },
+    {
+     "self": "2002-11-01",
+     "vendor": "2002-11-01",
+     "tday_delta": 0
+    },
+    {
+     "self": "2002-11-14",
+     "vendor": "2002-11-14",
+     "tday_delta": 0
+    },
+    {
+     "self": "2002-11-19",
+     "vendor": "2002-11-19",
+     "tday_delta": 0
+    },
+    {
+     "self": "2002-11-27",
+     "vendor": "2002-11-27",
+     "tday_delta": 0
+    },
+    {
+     "self": "2002-12-04",
+     "vendor": "2002-12-04",
+     "tday_delta": 0
+    },
+    {
+     "self": "2002-12-10",
+     "vendor": "2002-12-10",
+     "tday_delta": 0
+    },
+    {
+     "self": "2002-12-20",
+     "vendor": "2002-12-26",
+     "tday_delta": 3
+    },
+    {
+     "self": "2002-12-26",
+     "vendor": "2003-01-02",
+     "tday_delta": 4
+    },
+    {
+     "self": "2003-01-02",
+     "vendor": "2003-01-09",
+     "tday_delta": 5
+    },
+    {
+     "self": "2003-03-17",
+     "vendor": "2003-03-17",
+     "tday_delta": 0
+    },
+    {
+     "self": "2003-03-25",
+     "vendor": "2003-03-25",
+     "tday_delta": 0
+    },
+    {
+     "self": "2003-04-01",
+     "vendor": "2003-04-01",
+     "tday_delta": 0
+    },
+    {
+     "self": "2004-08-10",
+     "vendor": "2004-08-10",
+     "tday_delta": 0
+    },
+    {
+     "self": "2004-08-16",
+     "vendor": "2004-08-16",
+     "tday_delta": 0
+    },
+    {
+     "self": "2005-04-21",
+     "vendor": "2005-04-21",
+     "tday_delta": 0
+    },
+    {
+     "self": "2005-04-25",
+     "vendor": "2005-04-25",
+     "tday_delta": 0
+    },
+    {
+     "self": "2005-04-27",
+     "vendor": "2005-04-29",
+     "tday_delta": 2
+    },
+    {
+     "self": "2005-10-19",
+     "vendor": "2005-10-19",
+     "tday_delta": 0
+    },
+    {
+     "self": "2005-10-24",
+     "vendor": "2005-10-24",
+     "tday_delta": 0
+    },
+    {
+     "self": "2006-05-25",
+     "vendor": "2006-05-25",
+     "tday_delta": 0
+    },
+    {
+     "self": "2006-05-31",
+     "vendor": "2006-05-31",
+     "tday_delta": 0
+    },
+    {
+     "self": "2006-06-15",
+     "vendor": "2006-06-15",
+     "tday_delta": 0
+    },
+    {
+     "self": "2006-06-21",
+     "vendor": "2006-06-21",
+     "tday_delta": 0
+    },
+    {
+     "self": "2006-07-19",
+     "vendor": "2006-07-19",
+     "tday_delta": 0
+    },
+    {
+     "self": "2006-07-24",
+     "vendor": "2006-07-24",
+     "tday_delta": 0
+    },
+    {
+     "self": "2007-03-14",
+     "vendor": "2007-03-14",
+     "tday_delta": 0
+    },
+    {
+     "self": "2007-08-06",
+     "vendor": "2007-08-08",
+     "tday_delta": 2
+    },
+    {
+     "self": "2007-08-22",
+     "vendor": "2007-08-22",
+     "tday_delta": 0
+    },
+    {
+     "self": "2007-08-24",
+     "vendor": "2007-08-24",
+     "tday_delta": 0
+    },
+    {
+     "self": "2007-08-31",
+     "vendor": "2007-08-31",
+     "tday_delta": 0
+    },
+    {
+     "self": "2007-09-06",
+     "vendor": "2007-09-06",
+     "tday_delta": 0
+    },
+    {
+     "self": "2007-09-11",
+     "vendor": "2007-09-14",
+     "tday_delta": 3
+    },
+    {
+     "self": "2007-09-13",
+     "vendor": "2007-09-18",
+     "tday_delta": 3
+    },
+    {
+     "self": "2007-10-23",
+     "vendor": "2007-10-23",
+     "tday_delta": 0
+    },
+    {
+     "self": "2007-11-13",
+     "vendor": "2007-11-13",
+     "tday_delta": 0
+    },
+    {
+     "self": "2007-11-23",
+     "vendor": "2007-11-23",
+     "tday_delta": 0
+    },
+    {
+     "self": "2007-11-28",
+     "vendor": "2007-11-28",
+     "tday_delta": 0
+    },
+    {
+     "self": "2007-12-21",
+     "vendor": "2007-12-21",
+     "tday_delta": 0
+    },
+    {
+     "self": "2008-02-01",
+     "vendor": "2008-02-01",
+     "tday_delta": 0
+    },
+    {
+     "self": "2008-02-20",
+     "vendor": "2008-02-25",
+     "tday_delta": 3
+    },
+    {
+     "self": "2008-03-18",
+     "vendor": "2008-03-18",
+     "tday_delta": 0
+    },
+    {
+     "self": "2008-03-24",
+     "vendor": "2008-03-24",
+     "tday_delta": 0
+    },
+    {
+     "self": "2008-04-01",
+     "vendor": "2008-04-01",
+     "tday_delta": 0
+    },
+    {
+     "self": "2008-04-16",
+     "vendor": "2008-04-16",
+     "tday_delta": 0
+    },
+    {
+     "self": "2008-04-24",
+     "vendor": "2008-04-24",
+     "tday_delta": 0
+    },
+    {
+     "self": "2008-07-22",
+     "vendor": "2008-07-22",
+     "tday_delta": 0
+    },
+    {
+     "self": "2008-08-05",
+     "vendor": "2008-08-05",
+     "tday_delta": 0
+    },
+    {
+     "self": "2008-08-08",
+     "vendor": "2008-08-08",
+     "tday_delta": 0
+    },
+    {
+     "self": "2008-08-14",
+     "vendor": "2008-08-14",
+     "tday_delta": 0
+    },
+    {
+     "self": "2008-08-22",
+     "vendor": "2008-08-22",
+     "tday_delta": 0
+    },
+    {
+     "self": "2008-08-27",
+     "vendor": "2008-08-27",
+     "tday_delta": 0
+    },
+    {
+     "self": "2008-09-19",
+     "vendor": "2008-09-19",
+     "tday_delta": 0
+    },
+    {
+     "self": "2009-01-02",
+     "vendor": "2009-01-02",
+     "tday_delta": 0
+    },
+    {
+     "self": "2009-02-06",
+     "vendor": "2009-02-06",
+     "tday_delta": 0
+    },
+    {
+     "self": "2009-03-17",
+     "vendor": "2009-03-17",
+     "tday_delta": 0
+    },
+    {
+     "self": "2009-03-23",
+     "vendor": "2009-03-23",
+     "tday_delta": 0
+    },
+    {
+     "self": "2009-03-31",
+     "vendor": "2009-03-31",
+     "tday_delta": 0
+    },
+    {
+     "self": "2009-04-08",
+     "vendor": "2009-04-08",
+     "tday_delta": 0
+    },
+    {
+     "self": "2009-04-29",
+     "vendor": "2009-04-29",
+     "tday_delta": 0
+    },
+    {
+     "self": "2009-05-29",
+     "vendor": "2009-05-29",
+     "tday_delta": 0
+    },
+    {
+     "self": "2009-06-04",
+     "vendor": "2009-06-04",
+     "tday_delta": 0
+    },
+    {
+     "self": "2009-06-12",
+     "vendor": "2009-06-12",
+     "tday_delta": 0
+    },
+    {
+     "self": "2009-06-23",
+     "vendor": "2009-06-23",
+     "tday_delta": 0
+    },
+    {
+     "self": "2009-06-25",
+     "vendor": "2009-06-25",
+     "tday_delta": 0
+    },
+    {
+     "self": "2009-07-15",
+     "vendor": "2009-07-15",
+     "tday_delta": 0
+    },
+    {
+     "self": "2010-05-17",
+     "vendor": "2010-05-17",
+     "tday_delta": 0
+    },
+    {
+     "self": "2010-05-27",
+     "vendor": "2010-05-27",
+     "tday_delta": 0
+    },
+    {
+     "self": "2010-06-02",
+     "vendor": "2010-06-02",
+     "tday_delta": 0
+    },
+    {
+     "self": "2010-06-10",
+     "vendor": "2010-06-10",
+     "tday_delta": 0
+    },
+    {
+     "self": "2010-07-07",
+     "vendor": "2010-07-07",
+     "tday_delta": 0
+    },
+    {
+     "self": "2010-07-19",
+     "vendor": "2010-07-20",
+     "tday_delta": 1
+    },
+    {
+     "self": "2010-07-22",
+     "vendor": "2010-07-22",
+     "tday_delta": 0
+    },
+    {
+     "self": "2010-08-17",
+     "vendor": "2010-08-17",
+     "tday_delta": 0
+    },
+    {
+     "self": "2010-08-27",
+     "vendor": "2010-08-27",
+     "tday_delta": 0
+    },
+    {
+     "self": "2010-09-01",
+     "vendor": "2010-09-01",
+     "tday_delta": 0
+    },
+    {
+     "self": "2011-06-14",
+     "vendor": "2011-06-14",
+     "tday_delta": 0
+    },
+    {
+     "self": "2011-06-17",
+     "vendor": "2011-06-17",
+     "tday_delta": 0
+    },
+    {
+     "self": "2011-06-27",
+     "vendor": "2011-06-27",
+     "tday_delta": 0
+    },
+    {
+     "self": "2011-07-15",
+     "vendor": "2011-07-15",
+     "tday_delta": 0
+    },
+    {
+     "self": "2011-07-19",
+     "vendor": "2011-07-19",
+     "tday_delta": 0
+    },
+    {
+     "self": "2011-08-15",
+     "vendor": "2011-08-15",
+     "tday_delta": 0
+    },
+    {
+     "self": "2011-08-23",
+     "vendor": "2011-08-23",
+     "tday_delta": 0
+    },
+    {
+     "self": "2011-08-26",
+     "vendor": "2011-08-26",
+     "tday_delta": 0
+    },
+    {
+     "self": "2011-09-07",
+     "vendor": "2011-09-07",
+     "tday_delta": 0
+    },
+    {
+     "self": "2011-09-13",
+     "vendor": "2011-09-13",
+     "tday_delta": 0
+    },
+    {
+     "self": "2011-09-26",
+     "vendor": "2011-09-26",
+     "tday_delta": 0
+    },
+    {
+     "self": "2011-10-06",
+     "vendor": "2011-10-06",
+     "tday_delta": 0
+    },
+    {
+     "self": "2011-10-10",
+     "vendor": "2011-10-10",
+     "tday_delta": 0
+    },
+    {
+     "self": "2011-11-11",
+     "vendor": "2011-11-11",
+     "tday_delta": 0
+    },
+    {
+     "self": "2011-11-28",
+     "vendor": "2011-11-30",
+     "tday_delta": 2
+    },
+    {
+     "self": "2012-04-11",
+     "vendor": "2012-04-11",
+     "tday_delta": 0
+    },
+    {
+     "self": "2012-05-21",
+     "vendor": "2012-05-21",
+     "tday_delta": 0
+    },
+    {
+     "self": "2012-05-24",
+     "vendor": "2012-05-24",
+     "tday_delta": 0
+    },
+    {
+     "self": "2012-06-22",
+     "vendor": "2012-06-22",
+     "tday_delta": 0
+    },
+    {
+     "self": "2012-06-27",
+     "vendor": "2012-06-27",
+     "tday_delta": 0
+    },
+    {
+     "self": "2012-07-26",
+     "vendor": "2012-07-26",
+     "tday_delta": 0
+    },
+    {
+     "self": "2012-08-03",
+     "vendor": "2012-08-03",
+     "tday_delta": 0
+    },
+    {
+     "self": "2012-11-19",
+     "vendor": "2012-11-19",
+     "tday_delta": 0
+    },
+    {
+     "self": "2013-08-20",
+     "vendor": "2013-08-20",
+     "tday_delta": 0
+    },
+    {
+     "self": "2013-08-22",
+     "vendor": "2013-08-22",
+     "tday_delta": 0
+    },
+    {
+     "self": "2013-08-28",
+     "vendor": "2013-08-28",
+     "tday_delta": 0
+    },
+    {
+     "self": "2013-09-03",
+     "vendor": "2013-09-03",
+     "tday_delta": 0
+    },
+    {
+     "self": "2014-02-04",
+     "vendor": "2014-02-06",
+     "tday_delta": 2
+    },
+    {
+     "self": "2014-02-06",
+     "vendor": "2014-01-30",
+     "tday_delta": 5
+    },
+    {
+     "self": "2014-09-26",
+     "vendor": "2014-09-26",
+     "tday_delta": 0
+    },
+    {
+     "self": "2014-10-03",
+     "vendor": "2014-10-03",
+     "tday_delta": 0
+    },
+    {
+     "self": "2014-10-08",
+     "vendor": "2014-10-08",
+     "tday_delta": 0
+    },
+    {
+     "self": "2014-10-20",
+     "vendor": "2014-10-20",
+     "tday_delta": 0
+    },
+    {
+     "self": "2015-07-01",
+     "vendor": "2015-07-07",
+     "tday_delta": 3
+    },
+    {
+     "self": "2015-07-07",
+     "vendor": "2015-07-10",
+     "tday_delta": 3
+    },
+    {
+     "self": "2015-08-27",
+     "vendor": "2015-08-27",
+     "tday_delta": 0
+    },
+    {
+     "self": "2015-09-08",
+     "vendor": "2015-09-08",
+     "tday_delta": 0
+    },
+    {
+     "self": "2015-09-16",
+     "vendor": "2015-09-15",
+     "tday_delta": 1
+    },
+    {
+     "self": "2015-10-02",
+     "vendor": "2015-10-02",
+     "tday_delta": 0
+    },
+    {
+     "self": "2015-11-16",
+     "vendor": "2015-11-18",
+     "tday_delta": 2
+    },
+    {
+     "self": "2015-12-15",
+     "vendor": "2015-12-15",
+     "tday_delta": 0
+    },
+    {
+     "self": "2015-12-22",
+     "vendor": "2015-12-23",
+     "tday_delta": 1
+    },
+    {
+     "self": "2016-01-26",
+     "vendor": "2016-01-26",
+     "tday_delta": 0
+    },
+    {
+     "self": "2016-01-29",
+     "vendor": "2016-01-29",
+     "tday_delta": 0
+    },
+    {
+     "self": "2016-02-12",
+     "vendor": "2016-02-12",
+     "tday_delta": 0
+    },
+    {
+     "self": "2016-09-15",
+     "vendor": "2016-09-15",
+     "tday_delta": 0
+    },
+    {
+     "self": "2016-09-21",
+     "vendor": "2016-09-21",
+     "tday_delta": 0
+    },
+    {
+     "self": "2016-10-18",
+     "vendor": "2016-10-18",
+     "tday_delta": 0
+    },
+    {
+     "self": "2016-11-07",
+     "vendor": "2016-11-07",
+     "tday_delta": 0
+    },
+    {
+     "self": "2017-08-14",
+     "vendor": "2017-08-15",
+     "tday_delta": 1
+    },
+    {
+     "self": "2017-08-22",
+     "vendor": "2017-08-22",
+     "tday_delta": 0
+    },
+    {
+     "self": "2018-02-14",
+     "vendor": "2018-02-14",
+     "tday_delta": 0
+    },
+    {
+     "self": "2018-02-23",
+     "vendor": "2018-02-23",
+     "tday_delta": 0
+    },
+    {
+     "self": "2018-03-26",
+     "vendor": "2018-03-29",
+     "tday_delta": 3
+    },
+    {
+     "self": "2018-03-29",
+     "vendor": "2018-04-05",
+     "tday_delta": 4
+    },
+    {
+     "self": "2018-04-04",
+     "vendor": "2018-04-10",
+     "tday_delta": 4
+    },
+    {
+     "self": "2018-10-16",
+     "vendor": "2018-10-16",
+     "tday_delta": 0
+    },
+    {
+     "self": "2018-10-30",
+     "vendor": "2018-10-30",
+     "tday_delta": 0
+    },
+    {
+     "self": "2019-01-10",
+     "vendor": "2019-01-10",
+     "tday_delta": 0
+    },
+    {
+     "self": "2019-01-16",
+     "vendor": "2019-01-15",
+     "tday_delta": 1
+    },
+    {
+     "self": "2019-06-03",
+     "vendor": "2019-06-03",
+     "tday_delta": 0
+    },
+    {
+     "self": "2019-08-07",
+     "vendor": "2019-08-08",
+     "tday_delta": 1
+    },
+    {
+     "self": "2019-08-13",
+     "vendor": "2019-08-13",
+     "tday_delta": 0
+    },
+    {
+     "self": "2019-08-16",
+     "vendor": "2019-08-16",
+     "tday_delta": 0
+    },
+    {
+     "self": "2019-08-26",
+     "vendor": "2019-08-26",
+     "tday_delta": 0
+    },
+    {
+     "self": "2019-08-28",
+     "vendor": "2019-08-28",
+     "tday_delta": 0
+    },
+    {
+     "self": "2019-10-03",
+     "vendor": "2019-10-03",
+     "tday_delta": 0
+    },
+    {
+     "self": "2019-10-09",
+     "vendor": "2019-10-09",
+     "tday_delta": 0
+    },
+    {
+     "self": "2020-03-04",
+     "vendor": "2020-03-04",
+     "tday_delta": 0
+    },
+    {
+     "self": "2020-03-26",
+     "vendor": "2020-03-26",
+     "tday_delta": 0
+    },
+    {
+     "self": "2020-04-06",
+     "vendor": "2020-04-06",
+     "tday_delta": 0
+    },
+    {
+     "self": "2020-04-22",
+     "vendor": "2020-04-22",
+     "tday_delta": 0
+    },
+    {
+     "self": "2020-05-05",
+     "vendor": "2020-05-05",
+     "tday_delta": 0
+    },
+    {
+     "self": "2020-05-07",
+     "vendor": "2020-05-07",
+     "tday_delta": 0
+    },
+    {
+     "self": "2020-09-10",
+     "vendor": "2020-09-11",
+     "tday_delta": 1
+    },
+    {
+     "self": "2020-09-25",
+     "vendor": "2020-09-25",
+     "tday_delta": 0
+    },
+    {
+     "self": "2020-11-02",
+     "vendor": "2020-11-02",
+     "tday_delta": 0
+    },
+    {
+     "self": "2021-09-23",
+     "vendor": "2021-09-23",
+     "tday_delta": 0
+    },
+    {
+     "self": "2021-09-29",
+     "vendor": "2021-09-29",
+     "tday_delta": 0
+    },
+    {
+     "self": "2021-10-01",
+     "vendor": "2021-10-01",
+     "tday_delta": 0
+    },
+    {
+     "self": "2021-12-02",
+     "vendor": "2021-12-02",
+     "tday_delta": 0
+    },
+    {
+     "self": "2022-02-15",
+     "vendor": "2022-02-15",
+     "tday_delta": 0
+    },
+    {
+     "self": "2022-02-25",
+     "vendor": "2022-02-25",
+     "tday_delta": 0
+    },
+    {
+     "self": "2022-03-02",
+     "vendor": "2022-03-02",
+     "tday_delta": 0
+    },
+    {
+     "self": "2022-05-04",
+     "vendor": "2022-05-04",
+     "tday_delta": 0
+    },
+    {
+     "self": "2022-05-17",
+     "vendor": "2022-05-17",
+     "tday_delta": 0
+    },
+    {
+     "self": "2022-05-25",
+     "vendor": "2022-05-25",
+     "tday_delta": 0
+    },
+    {
+     "self": "2022-06-24",
+     "vendor": "2022-06-24",
+     "tday_delta": 0
+    },
+    {
+     "self": "2022-07-07",
+     "vendor": "2022-07-07",
+     "tday_delta": 0
+    },
+    {
+     "self": "2022-07-15",
+     "vendor": "2022-07-15",
+     "tday_delta": 0
+    },
+    {
+     "self": "2022-07-19",
+     "vendor": "2022-07-19",
+     "tday_delta": 0
+    },
+    {
+     "self": "2022-07-25",
+     "vendor": "2022-07-25",
+     "tday_delta": 0
+    },
+    {
+     "self": "2022-07-27",
+     "vendor": "2022-07-27",
+     "tday_delta": 0
+    },
+    {
+     "self": "2022-09-07",
+     "vendor": "2022-09-07",
+     "tday_delta": 0
+    },
+    {
+     "self": "2022-10-04",
+     "vendor": "2022-10-04",
+     "tday_delta": 0
+    },
+    {
+     "self": "2022-10-13",
+     "vendor": "2022-10-13",
+     "tday_delta": 0
+    },
+    {
+     "self": "2022-10-18",
+     "vendor": "2022-10-18",
+     "tday_delta": 0
+    },
+    {
+     "self": "2022-10-21",
+     "vendor": "2022-10-21",
+     "tday_delta": 0
+    },
+    {
+     "self": "2022-11-04",
+     "vendor": "2022-11-04",
+     "tday_delta": 0
+    },
+    {
+     "self": "2022-11-10",
+     "vendor": "2022-11-10",
+     "tday_delta": 0
+    },
+    {
+     "self": "2022-12-21",
+     "vendor": "2022-12-21",
+     "tday_delta": 0
+    },
+    {
+     "self": "2022-12-23",
+     "vendor": "2022-12-23",
+     "tday_delta": 0
+    },
+    {
+     "self": "2022-12-29",
+     "vendor": "2022-12-29",
+     "tday_delta": 0
+    },
+    {
+     "self": "2023-01-04",
+     "vendor": "2023-01-04",
+     "tday_delta": 0
+    },
+    {
+     "self": "2023-01-06",
+     "vendor": "2023-01-06",
+     "tday_delta": 0
+    },
+    {
+     "self": "2023-03-16",
+     "vendor": "2023-03-21",
+     "tday_delta": 3
+    },
+    {
+     "self": "2023-03-21",
+     "vendor": "2023-03-27",
+     "tday_delta": 4
+    },
+    {
+     "self": "2023-05-26",
+     "vendor": "2023-05-26",
+     "tday_delta": 0
+    },
+    {
+     "self": "2023-06-02",
+     "vendor": "2023-06-02",
+     "tday_delta": 0
+    },
+    {
+     "self": "2023-08-23",
+     "vendor": "2023-08-25",
+     "tday_delta": 2
+    },
+    {
+     "self": "2023-10-10",
+     "vendor": "2023-10-10",
+     "tday_delta": 0
+    },
+    {
+     "self": "2023-10-16",
+     "vendor": "2023-10-16",
+     "tday_delta": 0
+    },
+    {
+     "self": "2023-11-02",
+     "vendor": "2023-11-02",
+     "tday_delta": 0
+    },
+    {
+     "self": "2023-11-10",
+     "vendor": "2023-11-10",
+     "tday_delta": 0
+    },
+    {
+     "self": "2024-04-19",
+     "vendor": "2024-04-19",
+     "tday_delta": 0
+    },
+    {
+     "self": "2024-12-24",
+     "vendor": "2024-12-24",
+     "tday_delta": 0
+    },
+    {
+     "self": "2024-12-31",
+     "vendor": "2024-12-31",
+     "tday_delta": 0
+    },
+    {
+     "self": "2025-01-06",
+     "vendor": "2025-01-14",
+     "tday_delta": 5
+    },
+    {
+     "self": "2025-03-07",
+     "vendor": "2025-03-07",
+     "tday_delta": 0
+    },
+    {
+     "self": "2025-03-14",
+     "vendor": "2025-03-14",
+     "tday_delta": 0
+    },
+    {
+     "self": "2025-03-24",
+     "vendor": "2025-03-24",
+     "tday_delta": 0
+    },
+    {
+     "self": "2025-04-14",
+     "vendor": "2025-04-14",
+     "tday_delta": 0
+    },
+    {
+     "self": "2025-04-17",
+     "vendor": "2025-04-22",
+     "tday_delta": 2
+    },
+    {
+     "self": "2025-04-22",
+     "vendor": "2025-04-28",
+     "tday_delta": 4
+    },
+    {
+     "self": "2026-01-02",
+     "vendor": "2026-01-02",
+     "tday_delta": 0
+    },
+    {
+     "self": "2026-01-08",
+     "vendor": "2026-01-08",
+     "tday_delta": 0
+    },
+    {
+     "self": "2026-03-13",
+     "vendor": "2026-03-16",
+     "tday_delta": 1
+    }
+   ],
+   "unmatched_self": [
+    "1991-12-06",
+    "1997-04-22",
+    "1998-09-15",
+    "2000-04-25",
+    "2001-04-10",
+    "2001-11-09",
+    "2001-11-13",
+    "2002-07-05",
+    "2002-10-23",
+    "2003-01-09",
+    "2005-04-29",
+    "2007-08-08",
+    "2007-09-18",
+    "2007-10-26",
+    "2007-12-13",
+    "2008-02-13",
+    "2008-02-25",
+    "2015-07-10",
+    "2015-11-10",
+    "2015-11-18",
+    "2018-04-10",
+    "2023-03-24",
+    "2023-08-25",
+    "2025-01-15"
+   ],
+   "unmatched_vendor": [
+    "1991-06-21",
+    "1991-06-27",
+    "1991-07-01",
+    "1992-03-13",
+    "1992-06-23",
+    "1992-06-29",
+    "1992-08-28",
+    "1993-02-19",
+    "1993-11-08",
+    "1993-11-10",
+    "1993-11-24",
+    "1994-04-25",
+    "1994-05-24",
+    "1994-07-14",
+    "1997-11-11",
+    "1998-06-17",
+    "1998-06-22",
+    "1999-08-06",
+    "1999-08-11",
+    "1999-09-17",
+    "1999-10-08",
+    "1999-12-03",
+    "2000-03-03",
+    "2000-05-24",
+    "2000-05-30",
+    "2001-10-26",
+    "2002-01-14",
+    "2002-11-06",
+    "2004-05-19",
+    "2004-05-21",
+    "2004-07-09",
+    "2004-07-13",
+    "2004-07-19",
+    "2004-07-29",
+    "2007-03-06",
+    "2007-12-05",
+    "2008-07-29",
+    "2009-04-16",
+    "2009-06-02",
+    "2009-10-29",
+    "2009-11-02",
+    "2010-07-30",
+    "2012-05-07",
+    "2012-05-10",
+    "2012-06-05",
+    "2012-06-12",
+    "2012-06-14",
+    "2012-12-31",
+    "2015-07-20",
+    "2016-10-26",
+    "2018-04-26",
+    "2018-05-04",
+    "2018-11-05",
+    "2018-11-26",
+    "2018-11-28",
+    "2020-09-04",
+    "2024-08-06",
+    "2024-08-08"
+   ]
+  },
+  "P6_up_volume": {
+   "finding": "no Norgate SPX up/down-volume series (only the McClellan Volume Oscillator) \u2014 no vendor guard possible for D4; self-computed stands alone"
+  }
+ },
+ "computed_at_utc": "2026-08-05T06:26:30+00:00",
+ "scope": "guard-adoption audit only; the WS7 self-computed layer is not up for replacement"
+}

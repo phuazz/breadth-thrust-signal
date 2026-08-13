@@ -15,7 +15,15 @@ from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent / "scripts"))
 
-from weekly_refresh import ROSTER_MAX_AGE_DAYS, check_payload, validate_roster  # noqa: E402
+from weekly_refresh import (  # noqa: E402
+    NDU_MAX_AGE_DAYS,
+    NORGATE_MIN_DELISTED_DB,
+    ROSTER_MAX_AGE_DAYS,
+    check_depth,
+    check_payload,
+    ndu_age_days,
+    validate_roster,
+)
 
 NOW = datetime(2026, 8, 13, 12, 0, tzinfo=timezone.utc)
 ROSTER_FRESH = "2026-08-07"
@@ -86,6 +94,95 @@ def test_roster_age_year_boundary_fires():
     p["study"]["window"]["end"] = "2026-12-31"
     fails = check_payload(p, now, "2026-11-01", lag_fn=lag0)
     assert any(str(ROSTER_MAX_AGE_DAYS) in f for f in fails)
+
+
+# --- norgate provider mode ---------------------------------------------------
+
+
+def norgate_payload():
+    return {
+        "survivorship_bias": False,
+        "current": {"as_of": "2026-08-12", "valid_count": 503},
+        "study": {"window": {"start": "1990-12-28", "end": "2026-08-12"}},
+        "data_quality": {"min_valid_constituents": 400, "provider": "norgate-pit"},
+    }
+
+
+def test_norgate_clean_payload_passes_without_roster():
+    assert check_payload(norgate_payload(), NOW, None, lag_fn=lag0, provider="norgate") == []
+
+
+def test_norgate_fires_on_wrong_provider_tag():
+    p = norgate_payload()
+    p["data_quality"]["provider"] = "csp1-yahoo"
+    fails = check_payload(p, NOW, None, lag_fn=lag0, provider="norgate")
+    assert any("wrong layer" in f for f in fails)
+
+
+def test_norgate_fires_on_shortened_history():
+    p = norgate_payload()
+    p["study"]["window"]["start"] = "1994-03-01"
+    fails = check_payload(p, NOW, None, lag_fn=lag0, provider="norgate")
+    assert any("silently shortened" in f for f in fails)
+
+
+def test_norgate_mode_ignores_roster_age():
+    # No roster is involved post-cutover; an ancient date must not fire.
+    assert check_payload(norgate_payload(), NOW, "2020-01-01", lag_fn=lag0, provider="norgate") == []
+
+
+def good_probe():
+    return {"ready": True, "ndu_age_days": 1, "spx_first": "1950-01-03",
+            "delisted_db_count": 21104}
+
+
+def test_depth_clean_passes():
+    assert check_depth(good_probe()) == []
+
+
+def test_depth_fires_on_ndu_down():
+    fails = check_depth({"ready": False, "ready_detail": "NDU not running"})
+    assert fails and "not ready" in fails[0]
+
+
+def test_depth_fires_on_stale_store():
+    p = good_probe()
+    p["ndu_age_days"] = NDU_MAX_AGE_DAYS + 5
+    fails = check_depth(p)
+    assert any("days old" in f for f in fails)
+
+
+def test_depth_fires_on_lost_reach():
+    p = good_probe()
+    p["spx_first"] = "1994-06-01"
+    fails = check_depth(p)
+    assert any("reach lost" in f for f in fails)
+
+
+def test_depth_fires_on_thin_delisted_archive():
+    p = good_probe()
+    p["delisted_db_count"] = 1371  # the trial-tier count — survivorship returned
+    fails = check_depth(p)
+    assert any("survivorship" in f for f in fails)
+    assert str(NORGATE_MIN_DELISTED_DB) in fails[0]
+
+
+def test_ndu_age_month_boundary():
+    # 2026-01-31 23:00 SGT is 15:00 UTC; to 2026-02-02 00:00 UTC is 33h -> 1 day.
+    assert ndu_age_days("2026-01-31 23:00:00+08:00",
+                        datetime(2026, 2, 2, 0, 0, tzinfo=timezone.utc)) == 1
+
+
+def test_ndu_age_year_boundary():
+    # 2026-12-30 08:00 SGT is 00:00 UTC Dec 30; to 2027-01-03 00:00 UTC is 4 days.
+    assert ndu_age_days("2026-12-30 08:00:00+08:00",
+                        datetime(2027, 1, 3, 0, 0, tzinfo=timezone.utc)) == 4
+
+
+def test_ndu_age_naive_stamp_read_as_sgt():
+    # A naive NDU stamp is machine-local (SGT): 22:00 -> 14:00 UTC; +26h -> 1 day.
+    assert ndu_age_days("2026-08-12 22:00:00",
+                        datetime(2026, 8, 13, 16, 0, tzinfo=timezone.utc)) == 1
 
 
 def _roster(dates):

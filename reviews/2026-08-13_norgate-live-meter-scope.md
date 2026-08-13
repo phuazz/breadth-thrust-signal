@@ -86,3 +86,33 @@ CSP1+Yahoo path is retained as the flagged fallback (survivorship banner
 returns if it ever governs). Out of scope: any threshold re-tune (forbidden),
 the Summation Index (stays excluded), the small-cap thread (own
 pre-registration if ever).
+
+## Build addendum — same day (2026-08-13, Thursday; owner "go ahead")
+
+Shipped in three commits: `b60727a` (`pipeline.py --provider norgate` wires
+`norgate_provider.live_panel` — readiness gate, 5% unfetchable ceiling, basis
+integrity; `--preview` renders real-data rehearsals into gitignored dirs),
+`17c46e3` (`weekly_refresh.py --provider norgate` swaps the roster sync for
+the depth gate — NDU age ≤ 7 days, $SPX reach, delisted floor 15,000 — and
+pins the provider tag plus the 1990-12-28 window start; `parallel_run.py`
+rides the Saturday wrapper after a successful publish, alert-only, data_local
+only; 16 new fire-path tests, suite at 51), `9c599f2` (provider-aware scope
+banner with the restatement disclosure, dormant under csp1; README; docs
+rebuilt). No new scheduled task — the parallel run rides the existing
+"breadth-thrust-signal weekly refresh" heartbeat, so fleet-watch coverage is
+unchanged.
+
+Evidence banked today: the rehearsal reproduced WS7 exactly (window
+1990-12-28 → 2026-08-12, 8,969 days, members/day 498–507, 98 events, 1,300 of
+1,300 symbols, 0 refresh failures) and matched the deployed edge on every
+dimension; the first parallel run returned **CLEAN** (10 of 10 edge sessions
+agree). Rendered checks: static check 0 fail; deployed page measured clean at
+390/844/768/1280 px (clientWidth read back 390/829/753/1265, zero uncontained
+overflow, minimum font 11.0 px, zero console errors); the Norgate preview
+page renders the 1990→ window and provenance note, clean at 390 px (one
+resize-without-reload measurement artefact identified and eliminated).
+
+**Nothing deployed changed today** — the page still publishes the CSP1 layer.
+Cutover after one-to-two clean Saturdays (2026-08-15, 2026-08-22, both
+weekday-verified): flip the wrapper to `--provider norgate`, re-render, full
+mobile check on the restated page, ledger and record amendment.

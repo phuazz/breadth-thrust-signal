@@ -1,7 +1,8 @@
 {
-  "generated_utc": "2026-08-13T08:55:05.067109+00:00",
+  "generated_utc": "2026-08-13T14:46:32.773070+00:00",
   "survivorship_bias": false,
   "data_quality": {
+    "provider": "csp1-yahoo",
     "ever_members": 723,
     "fetched_constituents": 613,
     "used_constituents": 613,
@@ -93,7 +94,7 @@
           },
           {
             "label": "McClellan Oscillator",
-            "value": 4.1031291669967125,
+            "value": 4.1031291669975865,
             "display": "4",
             "scale": {
               "min": -150,

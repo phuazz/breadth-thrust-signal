@@ -258,7 +258,15 @@ function renderScope(d) {
   const bits = [];
   if (w.start && w.end) bits.push(`<b>Study window ${w.start} → ${w.end}</b> (${w.trading_days} trading days). Conditional sample and bootstrap baseline are period-matched to this window.`);
   if (!d.survivorship_bias) bits.push("Membership is <b>point-in-time</b> (survivorship-correct).");
-  if (q.ever_members && q.unfetchable_members) bits.push(`Residual data-layer leak: of ${q.ever_members} ever-members, <b>${q.unfetchable_members}</b> are delisted/renamed beyond the price source and drop from historical breadth (these skew weak, mildly understating past declines).`);
+  // Provider provenance travels with the payload, so the page always
+  // describes the layer that actually built it (vault rule: provenance
+  // beside the number). The norgate branch stays dormant until the cutover
+  // flips the weekly refresh to --provider norgate.
+  if (q.provider === "norgate-pit") {
+    bits.push("Data layer: <b>Norgate daily point-in-time</b> membership with full delisted price history (survivorship-free from 1990; the window opens 1990-12-28 after the 252-day burn-in). Tables are restated from the earlier CSP1/Yahoo layer, whose event set the WS7 record showed was substantially a data-layer artefact — the reconciliation is filed in WS7 (2026-08-01).");
+  } else if (q.ever_members && q.unfetchable_members) {
+    bits.push(`Residual data-layer leak: of ${q.ever_members} ever-members, <b>${q.unfetchable_members}</b> are delisted/renamed beyond the price source and drop from historical breadth (these skew weak, mildly understating past declines).`);
+  }
   if (!bits.length) return;
   const el = document.getElementById("scope");
   el.className = "banner info";

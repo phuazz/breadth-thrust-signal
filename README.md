@@ -89,6 +89,24 @@ ratio; volume is unadjusted by nature). This is a large-cap proxy for true
 NYSE breadth — the two converge at the extremes the thrust conditions care
 about, and diverge at moderate readings we do not.
 
+### Two data layers (`pipeline.py --provider`)
+
+- **`csp1` (deployed default until cutover):** weekly iShares CSP1 snapshots +
+  Yahoo prices. Point-in-time from 2018; carries the documented residual leak
+  (delisted ever-members beyond Yahoo's reach drop from historical breadth).
+- **`norgate` (built 2026-08-13 per
+  `reviews/2026-08-13_norgate-live-meter-scope.md`, soaking):** the WS7 layer —
+  Norgate daily survivorship-free membership from 1990-01-02 with full
+  delisted history; TOTALRETURN close for direction/MAs/ranges, NONE-basis
+  raw volume for D4; window opens 1990-12-28 after the 252-day burn-in.
+  Vendor series live outside the repo (`C:\dev\.norgate-store\`, licence:
+  personal-use-only, public surface carries derived aggregates only). The
+  Saturday refresh runs an alert-only **parallel run** (`parallel_run.py`)
+  comparing the Norgate candidate against the published build at the live
+  edge; cutover flips the wrapper to `--provider norgate` after 1–2 clean
+  Saturdays and restates the published tables to the WS7-layer numbers, with
+  the restatement disclosed on the page.
+
 ### Point-in-time membership (survivorship mitigation)
 
 Reuse the existing `breadth-thrust-etf` infrastructure rather than reinventing
@@ -146,11 +164,14 @@ breadth-thrust-signal/
 ├── scripts/
 │   ├── compute_breadth.py   # grouped/weighted signal engine (pure, tested)
 │   ├── forward_returns.py   # conditional study + bootstrap baseline (pure, tested)
-│   ├── membership.py        # point-in-time masking + fallback
-│   ├── data_providers.py    # price + volume fetch/cache (yfinance)
-│   ├── pipeline.py          # fetch -> mask -> compute -> study -> render
+│   ├── membership.py        # CSP1 point-in-time masking + fallback
+│   ├── data_providers.py    # csp1 layer: price + volume fetch/cache (yfinance)
+│   ├── norgate_provider.py  # norgate layer: WS7 daily PIT panel + live_panel
+│   ├── pipeline.py          # fetch -> mask -> compute -> study -> render (--provider)
+│   ├── weekly_refresh.py    # guarded Saturday refresh (roster sync / depth gate)
+│   ├── parallel_run.py      # alert-only Norgate soak harness (cutover gate)
 │   └── validate_d1.py       # cross-check D1 thrust dates vs published anchors
-├── tests/test_engine.py     # 6 tests: thrust detection, scoring, no-lookahead, date edges
+├── tests/                   # engine, guards, comparator, date edges (51 tests)
 ├── data/                    # signals.json, panel_cache.json, constituents_csp1.json
 ├── template.html            # dashboard source (light theme, Plotly)
 └── docs/index.html          # built GitHub Pages output (do not edit)
@@ -278,5 +299,13 @@ suite green. A failed run publishes nothing — the deployed page keeps its last
 good build, and its client-side banner turns amber once the data is more than
 9 calendar days old. The heartbeat is watched by the vault fleet watch on the
 "Weekly refresh" commit.
+
+After a successful publish the wrapper also runs the **Norgate parallel run**
+(alert-only, `data_local/` only — see the Data section): the cutover candidate
+is built and guard-checked every Saturday until the soak clears. In
+`--provider norgate` mode (post-cutover) the roster-sync step becomes the
+depth gate (NDU readiness and age, $SPX reach, delisted-archive floor) and
+the output guards additionally pin the provider tag and the 1990-12-28
+window start.
 
 *Last updated: 2026-08-13*

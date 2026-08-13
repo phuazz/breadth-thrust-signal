@@ -37,6 +37,11 @@ design.
 - `template.html` is the source. **Never edit `docs/index.html`** — it is built.
 - Light theme, sans-serif, high contrast.
 - Build: `python scripts/pipeline.py` (canonical, not `build.py`).
+- **The page is a LIVE METER** (owner decision 2026-08-13). The weekly guarded
+  refresh is `scripts/weekly_refresh.py` (schtask Sat 07:00 SGT); it must never
+  publish with a guard failing, and the client-side staleness banner
+  (`renderStaleness`) plus the fleet-watch heartbeat row are its guard layer —
+  do not remove either.
 
 ## Tests
 
@@ -45,4 +50,4 @@ thrust detection on planted synthetic surges, score bounds, the OR-within-
 dimension invariant, the no-lookahead lag, and date edge cases (month and year
 boundaries via a date library).
 
-*Last updated: 2026-06-01*
+*Last updated: 2026-08-13*

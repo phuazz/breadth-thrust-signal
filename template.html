@@ -115,6 +115,11 @@
   .maptbl .d1 { color: var(--accent); font-weight: 600; }
   .maptbl .excl { color: var(--bad); font-weight: 600; }
   .maptbl .keep { color: var(--good); font-weight: 600; }
+  /* Mobile discipline (MOBILE_CHECK.md): the page body must never scroll
+     horizontally — wide tables scroll inside their own container instead —
+     and iOS must not inflate text when rotated to landscape. */
+  html { -webkit-text-size-adjust: 100%; }
+  .tblwrap { overflow-x: auto; -webkit-overflow-scrolling: touch; }
 </style>
 </head>
 <body>
@@ -122,7 +127,10 @@
   <h1>Breadth-Thrust Signal</h1>
   <p class="sub">Risk-on conviction meter — the bullish mirror of the Equity Defense Dashboard. A grouped four-dimension breadth score with a conditional forward-return study measured against a bootstrap baseline.</p>
 
+  <p class="sub" style="font-size:12.5px;color:var(--ink-faint)">Live meter — refreshed weekly (Saturday morning SGT), data to the prior Friday NYSE close. A stale-data banner appears here if the refresh has not run.</p>
+
   <div id="banner"></div>
+  <div id="stale-banner"></div>
   <div id="scope"></div>
   <div id="status" class="hero"></div>
 
@@ -169,7 +177,7 @@
     <h2>Why four dimensions, not eight signals</h2>
     <p>The canonical list of "eight breadth-thrust signals" is not eight independent facts. Several are different mathematical views of the <b>same</b> underlying data series, so summing all eight double-counts a single breadth move and overstates conviction. This engine keeps every signal's information but groups them by the data they actually come from — four independent measurement axes — and drops one signal that adds nothing but a fitted threshold.</p>
 
-    <table class="maptbl"><thead><tr><th>#</th><th>Canonical signal</th><th>Underlying series</th><th>Maps to</th></tr></thead><tbody>
+    <div class="tblwrap"><table class="maptbl"><thead><tr><th>#</th><th>Canonical signal</th><th>Underlying series</th><th>Maps to</th></tr></thead><tbody>
       <tr><td>1</td><td>Zweig Breadth Thrust</td><td>advance / decline</td><td class="d1">D1</td></tr>
       <tr><td>2</td><td>McClellan Oscillator</td><td>advance / decline</td><td class="d1">D1</td></tr>
       <tr><td>6</td><td>10-day A/D ratio (Deemer)</td><td>advance / decline</td><td class="d1">D1</td></tr>
@@ -178,7 +186,7 @@
       <tr><td>4</td><td>NH / (NH + NL) ratio</td><td>new highs / lows</td><td class="keep">D3</td></tr>
       <tr><td>8</td><td>Net new highs</td><td>new highs / lows</td><td class="keep">D3</td></tr>
       <tr><td>5</td><td>Up-volume ratio</td><td>volume</td><td class="keep">D4</td></tr>
-    </tbody></table>
+    </tbody></table></div>
 
     <h2>The double-counting problem</h2>
     <p>Signals 1, 2, 6 and 7 are all functions of one daily series — the count of advancers versus decliners. The Summation Index (7) is literally the running cumulative sum of the McClellan Oscillator (2); it carries no information the Oscillator does not. So in a naive 0–8 sum, a single strong advance/decline surge can light up four of the eight boxes at once. "Six of eight firing" can be two or three underlying readings wearing six hats — which inflates the apparent corroboration, exactly what a conviction meter must not do.</p>
@@ -223,6 +231,24 @@ function renderBanner(d) {
     const el = document.getElementById("banner");
     el.className = "banner warn";
     el.innerHTML = "<b>Survivorship-biased universe.</b> No point-in-time membership snapshot was found, so breadth is computed on a static current-member list. Forward returns will look cleaner than reality. Supply <code>data/constituents_csp1.json</code> for a publishable result.";
+  }
+}
+
+function renderStaleness(d) {
+  // Live-meter guard (page side): if the breadth data is older than the weekly
+  // cadence tolerates, say so loudly rather than render as if current. Date
+  // handling: ISO "YYYY-MM-DD" parsed as UTC midnight by the Date constructor;
+  // no numeric month construction is used (JS months are 0-indexed when built
+  // numerically — deliberately avoided here). Threshold 9 calendar days: a
+  // healthy Saturday refresh leaves data at most ~8 days old by the following
+  // Friday, so one missed cycle trips the banner within days.
+  const asof = d.current && d.current.as_of;
+  if (!asof) return;
+  const ageDays = Math.floor((Date.now() - Date.parse(asof + "T00:00:00Z")) / 86400000);
+  if (ageDays > 9) {
+    const el = document.getElementById("stale-banner");
+    el.className = "banner warn";
+    el.innerHTML = `<b>Stale data.</b> Breadth data ends <b>${asof}</b> (${ageDays} days ago) — the weekly refresh has not run. Treat the meter and the "latest signal" panel as historical until the next refresh lands.`;
   }
 }
 
@@ -312,7 +338,7 @@ function renderLastSignal(d) {
 
   // ----- Table: realised vs projection at each trigger level -----
   const levels = [1, 2, 3].filter(t => t <= Math.max(1, 4));
-  let html = "<table><thead><tr><th>Horizon</th><th>Realised (this signal)</th>" +
+  let html = "<div class=\"tblwrap\"><table><thead><tr><th>Horizon</th><th>Realised (this signal)</th>" +
     levels.map(t => `<th class="${t === score ? "col-hi" : ""}">Proj ≥${t} median [p10, p90]</th>`).join("") + "</tr></thead><tbody>";
   hkeys.forEach(h => {
     const real = ls.realized_by_horizon[h];
@@ -331,7 +357,7 @@ function renderLastSignal(d) {
           `<span style="color:var(--ink-faint)" class="num">[${signed(r.p10_ret)}, ${signed(r.p90_ret)}]</span>${t === score ? mark : ""}</td>`;
       }).join("") + "</tr>";
   });
-  html += "</tbody></table>";
+  html += "</tbody></table></div>";
   html += `<p class="tnote">Projections are the historical conditional distribution of forward returns at each trigger level over the study window (n = ${(cond["3|6m"] || {}).n || "—"} events at ≥3). The event reached score ${score}, so the ≥${score} column (highlighted) is its own analogue set. Small samples make the band wide — read it as a plausible range, not a forecast.</p>`;
   document.getElementById("lastsig_table").innerHTML = html;
 }
@@ -405,7 +431,7 @@ function renderLift(d) {
   const base = {};
   d.study.baseline.forEach(b => base[b.horizon] = b);
 
-  let html = "<table><thead><tr><th>Conviction</th><th>Stat</th>" + horizons.map(h => `<th>${h}</th>`).join("") + "</tr></thead><tbody>";
+  let html = "<div class=\"tblwrap\"><table><thead><tr><th>Conviction</th><th>Stat</th>" + horizons.map(h => `<th>${h}</th>`).join("") + "</tr></thead><tbody>";
   html += `<tr><td>Baseline (any day)</td><td>win / median</td>` +
     horizons.map(h => base[h] ? `<td>${pct(base[h].base_win_rate)}<br><span style="color:var(--ink-faint)">${signed(base[h].base_median_ret)}</span></td>` : "<td>—</td>").join("") + "</tr>";
   [1, 2, 3, 4].forEach(thr => {
@@ -429,7 +455,7 @@ function renderLift(d) {
         return `<td>${signed(r.median_ret)}<br><span class="${lc}">${signed(r.ret_lift)}</span></td>`;
       }).join("") + "</tr>";
   });
-  html += "</tbody></table>";
+  html += "</tbody></table></div>";
   document.getElementById("lift_table").innerHTML = html;
 }
 
@@ -482,6 +508,7 @@ function renderMethod(d) {
 
 load().then(d => {
   renderBanner(d);
+  renderStaleness(d);
   renderScope(d);
   renderStatus(d);
   renderLastSignal(d);

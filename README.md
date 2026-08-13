@@ -265,4 +265,18 @@ overlay (a pre-2009-only effect), and a defensive-state override whose apparent
   flagged without action; claiming it would require its own pre-registration on
   data not yet spent.
 
-*Last updated: 2026-08-01*
+## Refresh cadence — live meter (2026-08-13)
+
+Owner decision: the dashboard is a **live meter**, not a static study snapshot.
+`scripts/weekly_refresh.py` (Task Scheduler task "breadth-thrust-signal weekly
+refresh", Saturday 07:00 SGT — before the 08:00 vendor gauge guard, so that
+guard cross-checks a fresh panel) syncs the point-in-time roster from
+breadth-thrust-etf, re-runs the pipeline, and publishes only when the guards
+pass: as-of within 3 completed NYSE sessions, study window extended with the
+data, survivorship flag still false, valid-constituent floor cleared, test
+suite green. A failed run publishes nothing — the deployed page keeps its last
+good build, and its client-side banner turns amber once the data is more than
+9 calendar days old. The heartbeat is watched by the vault fleet watch on the
+"Weekly refresh" commit.
+
+*Last updated: 2026-08-13*

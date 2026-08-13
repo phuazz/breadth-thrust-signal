@@ -333,6 +333,91 @@ def benchmark_series(root: Path, universe: "Universe" = None) -> pd.Series:
 
 
 # ---------------------------------------------------------------------------
+# Live-meter panel (build-session 2026-08-13, per the scope memo)
+# ---------------------------------------------------------------------------
+
+# Hard ceiling on silently-missing members. A failed pull of a 1990s delisted
+# name thins history without an exception; the valid-constituent floor and the
+# window-start pin catch gross cases downstream, but a creeping loss should
+# fail here, loudly, at the source.
+MAX_UNFETCHABLE_SHARE = 0.05
+
+
+def live_panel(refresh_cache: bool = True, universe: "Universe" = None):
+    """The WS7 panel path packaged for the live pipeline.
+
+    Replicates ``ws7_extension.build()`` — readiness gate, universe, collision
+    and basis asserts, staleness check, full-symbol panel, daily point-in-time
+    mask — WITHOUT touching that filed study script. Returns
+    ``(adj_masked, vol_masked, spx, data_quality)`` shaped exactly like the
+    CSP1 path's inputs to ``compute_breadth.build_panels``, so the pipeline
+    downstream of membership is provider-agnostic.
+
+    Raises RuntimeError (never returns a partial panel) when NDU is down, a
+    database is missing, or more than MAX_UNFETCHABLE_SHARE of the ever-member
+    universe failed to load — a thinned panel published silently is the exact
+    failure mode the guard layer exists to prevent.
+    """
+    u = universe or SP500
+    root = cache_root_for(u)
+
+    r = readiness()
+    if not r.ok:
+        raise RuntimeError(f"Norgate not ready: {r.detail}")
+    log.info("NDU ready: %s", r.detail.get("US Equities"))
+
+    syms = resolve_universe(u)
+    assert_no_base_ticker_collision(syms)
+
+    failures: list = []
+    if refresh_cache:
+        stats = refresh(root, syms + [u.benchmark])
+        failures = stats["failed"]
+    assert_basis_integrity(root, syms)
+    stale = check_staleness(root, syms)
+
+    close, volume = build_panel(root, syms)
+    missing = len(syms) - close.shape[1]
+    if missing / max(len(syms), 1) > MAX_UNFETCHABLE_SHARE:
+        raise RuntimeError(
+            f"{missing} of {len(syms)} ever-members missing from the panel "
+            f"(> {MAX_UNFETCHABLE_SHARE:.0%}) — refusing to build a silently "
+            f"thinned history"
+        )
+
+    mask = membership_mask(syms, close.index, u)
+    adj_m = close.where(mask)
+    vol_m = volume.where(mask)
+    spx = benchmark_series(root, u)
+
+    active = mask.sum(axis=1)
+    active = active[active > 0]
+    data_quality = {
+        "provider": "norgate-pit",
+        "ever_members": len(syms),
+        "fetched_constituents": int(close.shape[1]),
+        "used_constituents": int(adj_m.shape[1]),
+        "unfetchable_members": int(missing),
+        "refresh_failures": len(failures),
+        "members_per_day": {
+            "min": int(active.min()) if len(active) else None,
+            "median": int(active.median()) if len(active) else None,
+            "max": int(active.max()) if len(active) else None,
+        },
+        "ndu_last_database_update": ndu_update_time(),
+        "staleness": stale,
+        "note": (
+            "Norgate daily point-in-time membership (survivorship-free from "
+            "1990-01-02) with full delisted price history; TOTALRETURN close "
+            "for direction/MAs/52-week ranges, NONE-basis raw volume for the "
+            "up-volume ratio. Vendor series stay outside the repository; only "
+            "derived aggregates publish."
+        ),
+    }
+    return adj_m, vol_m, spx, data_quality
+
+
+# ---------------------------------------------------------------------------
 # Integrity guards (spec section 4)
 # ---------------------------------------------------------------------------
 

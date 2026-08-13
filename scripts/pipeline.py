@@ -8,8 +8,11 @@ Canonical build entry point (per vault convention: pipeline.py, not build.py):
 
 Stages
 ------
-1. Resolve membership (point-in-time CSP1 snapshots if present, else current-list
-   fallback with a loud survivorship flag).
+1. Resolve membership. Provider-switched (``--provider``): the deployed
+   default ``csp1`` uses point-in-time CSP1 snapshots if present (else a
+   current-list fallback with a loud survivorship flag); ``norgate`` uses the
+   WS7 daily point-in-time layer (norgate_provider.live_panel — window opens
+   1990-12-28 after the 252-day burn-in, vendor cache outside the repo).
 2. Fetch / update the constituent price+volume panel (cached).
 3. Build breadth panels -> grouped/weighted composite (compute_breadth).
 4. Conditional forward-return study with bootstrap baseline (forward_returns).
@@ -399,6 +402,14 @@ def main() -> int:
     ap.add_argument("--self-test", action="store_true", help="synthetic end-to-end run")
     ap.add_argument("--tickers", default=str(DATA / "universe.json"),
                     help="JSON list of tickers for the fallback static universe")
+    ap.add_argument("--provider", choices=("csp1", "norgate"), default="csp1",
+                    help="data layer: csp1 = CSP1 snapshots + Yahoo (deployed "
+                         "default until cutover); norgate = WS7 daily "
+                         "point-in-time layer (window opens 1990-12-28)")
+    ap.add_argument("--preview", action="store_true",
+                    help="render into data/_preview and docs/_preview instead "
+                         "of the deployed outputs — a real-data rehearsal that "
+                         "cannot overwrite the live page")
     args = ap.parse_args()
 
     if args.self_test:
@@ -414,60 +425,72 @@ def main() -> int:
                  DATA / "signals.json", DOCS / "index.html")
         return 0
 
-    # Resolve universe for fetch.
-    universe_path = Path(args.tickers)
-    if universe_path.exists():
-        universe = mb.current_members_from_list(json.loads(universe_path.read_text()))
-    elif PIT_SNAPSHOTS.exists():
-        snaps = json.loads(PIT_SNAPSHOTS.read_text())["snapshots"]
-        universe = sorted({t for s in snaps.values() for t in s["tickers"]})
+    if args.provider == "norgate":
+        # WS7 daily point-in-time layer. Import inside the branch so csp1 runs
+        # (and CI test runs) never require norgatedata/NDU.
+        import norgate_provider as npv
+        adj, vol, spx, data_quality = npv.live_panel(refresh_cache=not args.no_fetch)
+        data_quality["min_valid_constituents"] = cb.MIN_VALID_CONSTITUENTS
+        survivorship = False
+        spx = spx.dropna()
+        panels = cb.build_panels(adj, vol)
+        comp = cb.compute_composite(panels)
     else:
-        log.error("No universe.json and no constituents_csp1.json — nothing to fetch.")
-        return 1
+        # Resolve universe for fetch.
+        universe_path = Path(args.tickers)
+        if universe_path.exists():
+            universe = mb.current_members_from_list(json.loads(universe_path.read_text()))
+        elif PIT_SNAPSHOTS.exists():
+            snaps = json.loads(PIT_SNAPSHOTS.read_text())["snapshots"]
+            universe = sorted({t for s in snaps.values() for t in s["tickers"]})
+        else:
+            log.error("No universe.json and no constituents_csp1.json — nothing to fetch.")
+            return 1
 
-    cache = PanelCache(str(DATA / "panel_cache.json"))
-    end = datetime.now(timezone.utc).strftime("%Y-%m-%d")
-    if not args.no_fetch:
-        cache.update(universe + [BENCHMARK], START, end)
+        cache = PanelCache(str(DATA / "panel_cache.json"))
+        end = datetime.now(timezone.utc).strftime("%Y-%m-%d")
+        if not args.no_fetch:
+            cache.update(universe + [BENCHMARK], START, end)
 
-    adj, vol = cache.to_frames()
-    if BENCHMARK not in adj.columns:
-        log.error("Benchmark %s not in panel — fetch it first.", BENCHMARK)
-        return 1
-    spx = adj[BENCHMARK].dropna()
-    adj = adj.drop(columns=[BENCHMARK])
-    vol = vol.drop(columns=[c for c in [BENCHMARK] if c in vol.columns])
+        adj, vol = cache.to_frames()
+        if BENCHMARK not in adj.columns:
+            log.error("Benchmark %s not in panel — fetch it first.", BENCHMARK)
+            return 1
+        spx = adj[BENCHMARK].dropna()
+        adj = adj.drop(columns=[BENCHMARK])
+        vol = vol.drop(columns=[c for c in [BENCHMARK] if c in vol.columns])
 
-    n_fetched = adj.shape[1]   # constituents with any price data in the panel
+        n_fetched = adj.shape[1]   # constituents with any price data in the panel
 
-    adj, vol, survivorship = resolve_membership(adj, vol)
-    n_used = adj.shape[1]      # constituents matched to the membership universe
-    panels = cb.build_panels(adj, vol)
-    comp = cb.compute_composite(panels)
+        adj, vol, survivorship = resolve_membership(adj, vol)
+        n_used = adj.shape[1]      # constituents matched to the membership universe
+        panels = cb.build_panels(adj, vol)
+        comp = cb.compute_composite(panels)
 
-    # Residual data-layer leak (distinct from survivorship of the MEMBERSHIP
-    # universe, which the PIT mask fixes): delisted / renamed former members
-    # that Yahoo no longer serves cannot be fetched, so they silently drop out
-    # of the historical breadth count. Disclose the magnitude. Delisted names
-    # skew weak, so their absence mildly understates past declines.
-    ever_members = None
-    if PIT_SNAPSHOTS.exists():
-        snaps = json.loads(PIT_SNAPSHOTS.read_text())["snapshots"]
-        ever_members = len({t for s in snaps.values() for t in s["tickers"]})
-    data_quality = {
-        "ever_members": ever_members,
-        "fetched_constituents": int(n_fetched),
-        "used_constituents": int(n_used),
-        "unfetchable_members": (int(ever_members - n_used) if ever_members else None),
-        "min_valid_constituents": cb.MIN_VALID_CONSTITUENTS,
-        "note": (
-            "Membership is point-in-time (survivorship-correct). Residual leak: "
-            "former members delisted/renamed beyond Yahoo's reach cannot be "
-            "fetched and drop from historical breadth. Days below "
-            "min_valid_constituents are flagged data_ok=false and excluded from "
-            "the study window."
-        ),
-    }
+        # Residual data-layer leak (distinct from survivorship of the MEMBERSHIP
+        # universe, which the PIT mask fixes): delisted / renamed former members
+        # that Yahoo no longer serves cannot be fetched, so they silently drop out
+        # of the historical breadth count. Disclose the magnitude. Delisted names
+        # skew weak, so their absence mildly understates past declines.
+        ever_members = None
+        if PIT_SNAPSHOTS.exists():
+            snaps = json.loads(PIT_SNAPSHOTS.read_text())["snapshots"]
+            ever_members = len({t for s in snaps.values() for t in s["tickers"]})
+        data_quality = {
+            "provider": "csp1-yahoo",
+            "ever_members": ever_members,
+            "fetched_constituents": int(n_fetched),
+            "used_constituents": int(n_used),
+            "unfetchable_members": (int(ever_members - n_used) if ever_members else None),
+            "min_valid_constituents": cb.MIN_VALID_CONSTITUENTS,
+            "note": (
+                "Membership is point-in-time (survivorship-correct). Residual leak: "
+                "former members delisted/renamed beyond Yahoo's reach cannot be "
+                "fetched and drop from historical breadth. Days below "
+                "min_valid_constituents are flagged data_ok=false and excluded from "
+                "the study window."
+            ),
+        }
 
     # Data-integrity guard (vault rule): flag thin breadth days.
     thin = (~comp["data_ok"]).sum()
@@ -475,7 +498,10 @@ def main() -> int:
         log.warning("%d trading days have < %d valid constituents.", thin, cb.MIN_VALID_CONSTITUENTS)
 
     payload = build_payload(comp, spx.reindex(comp.index), survivorship, data_quality, panels)
-    render(payload)
+    if args.preview:
+        render(payload, data_dir=DATA / "_preview", docs_dir=DOCS / "_preview")
+    else:
+        render(payload)
     c = payload["current"]
     log.info("Done — as of %s, %d/4 dimensions on (score %.1f)", c["as_of"], c["n_dimensions"], c["score"])
     return 0

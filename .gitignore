@@ -16,4 +16,7 @@ data/norgate/
 # Synthetic --self-test output. Fabricated numbers; never the filed record.
 data/_selftest/
 docs/_selftest/
+# Real-data --preview rehearsal output (provider cutover dry runs).
+data/_preview/
+docs/_preview/
 data_local/

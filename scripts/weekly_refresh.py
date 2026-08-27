@@ -64,7 +64,8 @@ DEFAULT_SOURCE_ROSTER = ROOT.parent / "breadth-thrust-etf" / "data" / "constitue
 
 MAX_SESSION_LAG = 3        # completed NYSE sessions the as-of may trail by
 ROSTER_MAX_AGE_DAYS = 45   # hard stop: a roster this stale is survivorship drift
-TRACKED_OUTPUTS = ["data/signals.json", "docs/index.html", "data/constituents_csp1.json"]
+TRACKED_OUTPUTS = ["data/signals.json", "docs/index.html", "data/constituents_csp1.json",
+                   "data/state.json"]
 
 # --- Norgate provider mode (build 2026-08-13 per the scope memo; cutover
 # --- flips the schtask wrapper to --provider norgate after a clean soak) ----
@@ -346,6 +347,25 @@ def main() -> int:
         t = subprocess.run([sys.executable, "-m", "pytest", "tests/", "-q"], cwd=ROOT)
         if t.returncode != 0:
             raise RuntimeError("pytest failed — not publishing")
+
+        # STATE_CONTRACT emission for the private consumer. Deliberately AFTER
+        # the guards and tests, and deliberately unable to fail this run: the
+        # meter is the product, the emission is a convenience for one private
+        # reader, and a convenience must never be able to withhold the product.
+        # emit_state.emit() never raises — see its module docstring for why the
+        # isolation is written down here rather than provided by a separate
+        # workflow, as it is for the five sibling emitters.
+        # The import is inside the try as well: emit() cannot raise, but an
+        # ImportError from a missing or broken module would otherwise fall into
+        # the outer handler and withhold the publish — the precise failure this
+        # whole block exists to prevent.
+        try:
+            import emit_state
+            if not emit_state.emit(log=log):
+                log("state emission failed — publishing the meter regardless")
+        except Exception as exc:  # noqa: BLE001 — never let a convenience block the product
+            log(f"state emission unavailable ({type(exc).__name__}: {exc}) — "
+                "publishing the meter regardless")
 
         publish(today, args.no_push)
         log("done")

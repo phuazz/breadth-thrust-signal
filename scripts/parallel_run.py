@@ -42,9 +42,37 @@ import weekly_refresh as wr  # noqa: E402
 OUT = ROOT / "data_local" / "parallel_last.json"
 EDGE_DAYS = 10  # sessions compared at the live edge (vendor-guard convention)
 
+# Windows consoles default to cp1252, which cannot encode the arrow and dash
+# this script's own summary line carries. Without this, a run whose verdict was
+# CLEAN raised UnicodeEncodeError inside the final print() and exited non-zero.
+#
+# That is not cosmetic. The record is written BEFORE the summary is logged, so
+# the soak produced a clean parallel_last.json and then reported failure — and
+# run_weekly_refresh.bat chains on the exit code. The 2026-08-22 soak run sat
+# that way until 2026-08-27: verdict CLEAN, zero alerts, ten of ten sessions
+# agreeing, and read as a failed soak by anything looking at the exit code.
+for _stream in (sys.stdout, sys.stderr):
+    try:
+        _stream.reconfigure(encoding="utf-8")
+    except (AttributeError, ValueError):
+        pass
+
 
 def log(msg: str) -> None:
-    print(f"[parallel] {msg}", flush=True)
+    """Print a progress line. NEVER raises.
+
+    Belt and braces over the reconfigure above: this is an unattended job whose
+    exit code decides whether the wrapper treats the run as usable, so a
+    progress message must not be able to fail it. If the stream still cannot
+    encode a character, the line degrades to ASCII rather than taking the run
+    down with it.
+    """
+    line = f"[parallel] {msg}"
+    try:
+        print(line, flush=True)
+    except UnicodeEncodeError:
+        enc = getattr(sys.stdout, "encoding", None) or "ascii"
+        print(line.encode(enc, errors="replace").decode(enc, errors="replace"), flush=True)
 
 
 def compare_edge(timeline: dict, cand: pd.DataFrame, days: int = EDGE_DAYS) -> dict:

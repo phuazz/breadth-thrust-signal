@@ -1,9 +1,21 @@
-"""Weekly Norgate parallel run — the soak harness gating the live-meter cutover.
+"""Weekly Norgate parallel run — the soak harness that gated the live-meter cutover.
 
-Runs AFTER the Saturday csp1 refresh has published (wired in
-run_weekly_refresh.bat, gated on the refresh succeeding). Alert-only: it
-changes nothing deployed and writes aggregate statistics only, to git-ignored
-data_local/ (vendor series values never leave the cache).
+STATUS 2026-09-02: the cutover is DONE and this script is RETIRED from
+run_weekly_refresh.bat. Three clean runs discharged the gate (2026-08-22 —
+record CLEAN, harness crashed on the summary print; 2026-08-27 manual after
+that fix; 2026-08-29 scheduled, 10 of 10 edge sessions, task result 0) and the
+wrapper flipped to ``--provider norgate``. From then on the deployed
+data/signals.json IS the Norgate layer, so an edge comparison against it would
+test the candidate against itself and read CLEAN by construction — a guard
+that cannot fire is scaffolding, not a guard. ``assert_cross_layer`` refuses
+that comparison outright (exit 1, no record written). Re-arm the script only
+for a genuine cross-layer soak, e.g. a future re-cutover from the CSP1 fallback.
+
+Original purpose, kept for the record. It ran AFTER the Saturday csp1 refresh
+had published (wired in run_weekly_refresh.bat, gated on the refresh
+succeeding). Alert-only: it changed nothing deployed and wrote aggregate
+statistics only, to git-ignored data_local/ (vendor series values never leave
+the cache).
 
 What one run proves, per the 2026-08-13 scope memo:
   1. The Norgate candidate BUILDS end to end this week (depth gate, panel,
@@ -41,6 +53,26 @@ import weekly_refresh as wr  # noqa: E402
 
 OUT = ROOT / "data_local" / "parallel_last.json"
 EDGE_DAYS = 10  # sessions compared at the live edge (vendor-guard convention)
+CANDIDATE_PROVIDER = "norgate-pit"  # the layer this harness builds as the candidate
+
+
+def assert_cross_layer(deployed: dict, candidate_provider: str = CANDIDATE_PROVIDER) -> str:
+    """Refuse a same-layer comparison; return the deployed provider tag otherwise.
+
+    The comparator's evidence is that two INDEPENDENT layers agree at the live
+    edge. Once the deployed payload carries the candidate's own provider tag
+    the two sides share every input, the mismatch count is zero by
+    construction, and a CLEAN verdict would certify nothing. Raise, so that no
+    record is written and the wrapper cannot mistake a tautology for a soak.
+    """
+    dep = (deployed.get("data_quality") or {}).get("provider")
+    if dep == candidate_provider:
+        raise ValueError(
+            f"deployed payload already carries provider {dep!r} — a parallel run "
+            f"would compare the {candidate_provider} candidate against itself; "
+            f"nothing to soak (cutover done 2026-09-02)"
+        )
+    return dep
 
 # Windows consoles default to cp1252, which cannot encode the arrow and dash
 # this script's own summary line carries. Without this, a run whose verdict was
@@ -115,6 +147,12 @@ def main() -> int:
     now = datetime.now(timezone.utc)
     alerts: list[str] = []
     try:
+        # Cheapest check first, before the depth probe and the panel build: a
+        # deployed payload on the candidate's own layer means there is nothing
+        # to soak, and the refusal must land before any record could be written.
+        deployed = json.loads((ROOT / "data" / "signals.json").read_text(encoding="utf-8"))
+        assert_cross_layer(deployed)
+
         depth_fails = wr.check_depth(wr.collect_depth_probe(now))
         if depth_fails:
             alerts.extend(f"depth: {f}" for f in depth_fails)
@@ -130,7 +168,6 @@ def main() -> int:
         guard_fails = wr.check_payload(payload, now, None, provider="norgate")
         alerts.extend(f"guard: {f}" for f in guard_fails)
 
-        deployed = json.loads((ROOT / "data" / "signals.json").read_text(encoding="utf-8"))
         edge = compare_edge(deployed["timeline"], comp)
         if edge.get("insufficient_overlap"):
             alerts.append(f"edge: only {edge['days_compared']} common sessions")

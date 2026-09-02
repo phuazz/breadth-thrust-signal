@@ -120,6 +120,21 @@
      and iOS must not inflate text when rotated to landscape. */
   html { -webkit-text-size-adjust: 100%; }
   .tblwrap { overflow-x: auto; -webkit-overflow-scrolling: touch; }
+  /* Reading measure (MOBILE_CHECK.md): running prose is capped near 70
+     characters so a desktop line does not run to 120; tables, charts and the
+     hero strip stay full width. Measured 2026-09-02 before the cap: 107
+     chars/line at 844 px, 122 at 1280 px. */
+  .sub, .panel > p, .tnote, ul.use, .banner, .card p, .dim-why, .ghint, .empty { max-width: 66ch; }
+  /* Phone padding: the 24 px column gutter plus per-element padding left list
+     items at 37 chars/line on a 390 px viewport (target 40–50). */
+  @media (max-width: 480px) {
+    .wrap { padding: 22px 16px 64px; }
+    .banner { padding: 12px 14px; }
+    ul.use li { padding-left: 22px; }
+    .card { padding: 14px 14px; }
+    .dim { padding: 12px 14px; }
+    .hero { padding: 18px 16px; gap: 18px; }
+  }
 </style>
 </head>
 <body>
@@ -138,10 +153,10 @@
     <h2>How to use this</h2>
     <ul class="use">
       <li><b>Read the number as conviction, not a trade.</b> A high score means breadth has thrust — many names participating in a turn up — not that today is an entry point. It sizes how much the tape confirms a risk-on turn.</li>
-      <li><b>Lean on the six-month median, not the headline win rate.</b> On this 2018–2026 sample the durable edge is the lift in six-month median return. The win-rate edge only clears the baseline noise band at the looser ≥1/≥2 thresholds (see the forward-return study below); the ≥3 win rate sits inside the band. Do not treat score ≥ 3 as a confirmed standalone trigger.</li>
+      <li id="use-edge"><b>Lean on the six-month median, not the headline win rate.</b> On this 2018–2026 sample the durable edge is the lift in six-month median return. The win-rate edge only clears the baseline noise band at the looser ≥1/≥2 thresholds (see the forward-return study below); the ≥3 win rate sits inside the band. Do not treat score ≥ 3 as a confirmed standalone trigger.</li>
       <li><b>Respect entry discipline.</b> Thrusts are most useful deployed after flat or negative stretches, to avoid buying the peak of an already-strong run — not to chase one.</li>
       <li><b>Combine, do not isolate.</b> This is the bullish mirror of the Equity Defense Dashboard. Use it to gauge risk-on conviction alongside your defensive signals, not as a lone timing model.</li>
-      <li><b>Mind the caveats.</b> Eight years is a thin sample (few fresh events); 111 of 715 former members are unfetchable and drop from history; pre-2018 is excluded. Treat conclusions as suggestive.</li>
+      <li id="use-caveats"><b>Mind the caveats.</b> Eight years is a thin sample (few fresh events); 111 of 715 former members are unfetchable and drop from history; pre-2018 is excluded. Treat conclusions as suggestive.</li>
     </ul>
 
     <h2>SPX with thrust events and conviction score</h2>
@@ -218,6 +233,21 @@ const signed = x => (x === null || x === undefined || isNaN(x)) ? "—" : (x >= 
 const clamp = v => Math.max(0, Math.min(100, v));
 
 const PLOT_FONT = { family: "Inter, sans-serif", size: 12, color: "#3f464e" };
+
+// Provenance helpers. The data layer that built the payload travels with it
+// (data_quality.provider), and every layer-specific sentence on this page
+// reads it rather than assuming a layer — the vault rule that provenance sits
+// beside the number, not in a global footnote. csp1-yahoo text is the
+// pre-cutover Phase 0 reading and stays as the dormant fallback; norgate-pit
+// text is the WS7/WS8 verdict on the 1990-12-28 → live window (live meter cut
+// over 2026-09-02).
+const isNorgate = d => ((d.data_quality || {}).provider === "norgate-pit");
+function providerLabel(d) {
+  const q = d.data_quality || {};
+  if (q.provider === "norgate-pit") return "Norgate daily point-in-time membership with full delisted history (survivorship-free; derived aggregates only)";
+  if (q.provider === "csp1-yahoo") return "iShares CSP1 weekly point-in-time snapshots + Yahoo prices";
+  return d.survivorship_bias ? "static current-member universe (survivorship-biased)" : "unspecified";
+}
 // Fresh axis object per call. Plotly mutates layout axis objects in place
 // (writing type/range/_length), so a shared reference corrupts other axes and
 // other charts — give each axis its own object and an explicit type.
@@ -263,7 +293,7 @@ function renderScope(d) {
   // beside the number). The norgate branch stays dormant until the cutover
   // flips the weekly refresh to --provider norgate.
   if (q.provider === "norgate-pit") {
-    bits.push("Data layer: <b>Norgate daily point-in-time</b> membership with full delisted price history (survivorship-free from 1990; the window opens 1990-12-28 after the 252-day burn-in). Tables are restated from the earlier CSP1/Yahoo layer, whose event set the WS7 record showed was substantially a data-layer artefact — the reconciliation is filed in WS7 (2026-08-01).");
+    bits.push("Data layer: <b>Norgate daily point-in-time</b> membership with full delisted price history (survivorship-free from 1990; the window opens 1990-12-28 after the 252-day burn-in). <b>Restated 2026-09-02</b> from the earlier CSP1/Yahoo layer (window 2019-01-07 → 2026-08-27 at its last publish, 110 delisted ever-members unfetchable), whose event set the WS7 record showed was substantially a data-layer artefact — the reconciliation is filed in WS7 (2026-08-01) and the pre-cutover figures stand in the README with that erratum.");
   } else if (q.ever_members && q.unfetchable_members) {
     bits.push(`Residual data-layer leak: of ${q.ever_members} ever-members, <b>${q.unfetchable_members}</b> are delisted/renamed beyond the price source and drop from historical breadth (these skew weak, mildly understating past declines).`);
   }
@@ -271,6 +301,20 @@ function renderScope(d) {
   const el = document.getElementById("scope");
   el.className = "banner info";
   el.innerHTML = bits.join(" ");
+}
+
+function renderUsage(d) {
+  // The "how to use" bullets carry layer-specific claims, so they travel with
+  // the payload exactly as the scope banner does. The static text in the
+  // markup is the csp1 (Phase 0, 2018–2026) reading and is left in place as
+  // the dormant fallback; under the Norgate layer the two layer-specific
+  // bullets restate to the filed WS7/WS8 verdicts. Numbers stay in the
+  // tables, where each carries its baseline.
+  if (!isNorgate(d)) return;
+  const edge = document.getElementById("use-edge");
+  const cav = document.getElementById("use-caveats");
+  if (edge) edge.innerHTML = "<b>Lean on the lift over baseline, not the headline win rate.</b> Every cell in the study below carries its bootstrap baseline. On the 1990→ point-in-time window the pre-registered score ≥ 3 / six-month standalone trigger <b>failed</b> its held-out test (WS7, 2026-08-01), and an unlevered tilt on the surviving one-month cell lost to its own cost-matched random-entry null net of costs (WS8). Read a high score as corroboration of participation, not as a timing trigger.";
+  if (cav) cav.innerHTML = "<b>Mind the caveats.</b> Breadth is computed on S&amp;P 500 constituents as a large-cap proxy for NYSE breadth. Score-4 events are rare, so that row is thin. The held-out history is spent: a claim at any horizon other than the pre-registered six months needs its own pre-registration on data not yet used. The earlier 2018–2026 CSP1/Yahoo page is superseded; its figures stand in the README with the WS7 erratum.";
 }
 
 function renderStatus(d) {
@@ -370,6 +414,19 @@ function renderLastSignal(d) {
   document.getElementById("lastsig_table").innerHTML = html;
 }
 
+// Log-axis ticks chosen from the data range rather than a fixed list. The
+// previous fixed list (2,500 to 7,000) fitted the 2019→ CSP1 window and would
+// have left the 1990→ window — SPX near 330 at the open — with no tick below
+// 2,500: a rendering defect the source numbers cannot reveal.
+function logTicks(series) {
+  const vals = series.filter(v => v !== null && v !== undefined && !isNaN(v));
+  if (!vals.length) return [];
+  const lo = vals.reduce((a, b) => Math.min(a, b), Infinity);
+  const hi = vals.reduce((a, b) => Math.max(a, b), -Infinity);
+  return [100, 150, 200, 300, 500, 700, 1000, 1500, 2000, 3000, 4000, 5000, 7000, 10000, 15000, 20000]
+    .filter(v => v >= lo * 0.9 && v <= hi * 1.1);
+}
+
 function renderCharts(d) {
   const t = d.timeline;
   const evIdx = t.event.map((e, i) => e ? i : -1).filter(i => i >= 0);
@@ -406,7 +463,7 @@ function renderCharts(d) {
     yaxis: ax({
       type: "log",
       title: { text: "SPX (log scale)", font: PLOT_FONT },
-      tickmode: "array", tickvals: [2500, 3000, 3500, 4000, 5000, 6000, 7000], tickformat: ","
+      tickmode: "array", tickvals: logTicks(t.spx), tickformat: ","
     }),
     xaxis: ax({ type: "date" }),
     paper_bgcolor: "#fff", plot_bgcolor: "#fff"
@@ -464,6 +521,14 @@ function renderLift(d) {
       }).join("") + "</tr>";
   });
   html += "</tbody></table></div>";
+  // Provenance beside the table, not only in the footer: basis, window and
+  // as-of are read from the payload, so a page carrying a different layer
+  // says so here, where the number is.
+  const w = (d.study && d.study.window) || {};
+  html += `<p class="tnote">Basis: ${providerLabel(d)}. Study window ${w.start} → ${w.end} (${w.trading_days} sessions), as of ${d.current.as_of}. ` +
+    `Events are fresh thrust days with the signal lagged one session; the baseline is a moving-block bootstrap over the same window; "clears noise" marks a win rate above the baseline's 95th percentile.` +
+    (isNorgate(d) ? ` Restated 2026-09-02 from the CSP1/Yahoo layer (window 2019-01-07 → 2026-08-27 at its last publish); reconciliation filed in WS7 (2026-08-01).` : "") +
+    `</p>`;
   document.getElementById("lift_table").innerHTML = html;
 }
 
@@ -471,16 +536,40 @@ function renderVerdict(d) {
   const get = (thr, h) => d.study.lift.find(r => r.threshold === thr && r.horizon === h);
   const r3 = get(3, "6m");
   if (!r3) return;
-  const medPass = r3.ret_lift !== null && r3.ret_lift > 0.01;
+  const norgate = isNorgate(d);
+  // Median leg: the Phase 0 (csp1) page used a fixed +1pp "meaningfully
+  // above"; WS7 pre-registered the 95th-percentile bootstrap bar for the
+  // median, symmetric with the win-rate test, and the Norgate page reads that.
+  const medPass = norgate ? !!r3.ret_beyond_noise : (r3.ret_lift !== null && r3.ret_lift > 0.01);
   const winPass = !!r3.win_beyond_noise;
+  // Conviction ordering of the six-month win-rate lift, computed from the
+  // table rather than asserted: Phase 0 saw it fall with conviction, and WS7
+  // showed that did not reproduce out of sample. The sentence must follow
+  // the data it sits beside.
+  const rows = [1, 2, 3, 4].map(t => get(t, "6m")).filter(r => r && r.n > 0 && r.win_lift !== null && r.win_lift !== undefined);
+  const seq = rows.map(r => `≥${r.threshold} ${signed(r.win_lift)}`).join(", ");
+  const vals = rows.map(r => r.win_lift);
+  const rising = vals.every((v, i) => i === 0 || v >= vals[i - 1]);
+  const falling = vals.every((v, i) => i === 0 || v <= vals[i - 1]);
+  const shape = rising ? "rises with conviction"
+    : falling ? "<i>falls</i> as conviction rises — the opposite of what a conviction meter should show"
+    : "is not monotone in conviction";
   const el = document.getElementById("verdict");
   el.className = "banner info";
-  el.innerHTML =
+  let html =
     `<b>Read against the decision criterion (score ≥ 3, 6-month).</b> ` +
-    `Median forward return ${signed(r3.median_ret)} vs baseline ${signed(r3.base_median_ret)} (lift ${signed(r3.ret_lift)}) — ${medPass ? "meaningfully above unconditional ✓" : "not meaningfully above ✗"}. ` +
-    `Win rate ${pct(r3.win_rate)} vs baseline ${pct(r3.base_win_rate)} (lift ${signed(r3.win_lift)}) — ${winPass ? "clears the noise band ✓" : "sits <i>inside</i> the baseline band, not distinguishable from noise ✗"}. ` +
-    `<br><b>Caveats:</b> only n=${r3.n} fresh events at score ≥ 3 over the window, so the win rate carries a binomial standard error near ±10pp. ` +
-    `The win-rate lift also <i>falls</i> as conviction rises (strongest at ≥1/≥2, weakest at ≥3/≥4), the opposite of what a conviction meter should show — treat as suggestive, not a confirmed standalone ≥3 timing trigger.`;
+    `Median forward return ${signed(r3.median_ret)} vs baseline ${signed(r3.base_median_ret)} (lift ${signed(r3.ret_lift)}) — ` +
+    (norgate ? (medPass ? "clears the 95th-percentile bootstrap bar ✓" : "does not clear the 95th-percentile bootstrap bar ✗")
+             : (medPass ? "meaningfully above unconditional ✓" : "not meaningfully above ✗")) + `. ` +
+    `Win rate ${pct(r3.win_rate)} vs baseline ${pct(r3.base_win_rate)} (lift ${signed(r3.win_lift)}) — ${winPass ? "clears the noise band ✓" : "sits <i>inside</i> the baseline band, not distinguishable from noise ✗"}. `;
+  if (norgate) {
+    html += `<br><b>Verdict on file (WS7, 2026-08-01):</b> the pre-registered ≥3 / six-month trigger <b>failed</b> its held-out test on 1990–2017 (win leg 75.0% against a 78.0% bar; median leg passed) and the pooled window agreed. This live cell contains that window, so it reports; it does not decide. ` +
+      `<br><b>Caveats:</b> n=${r3.n} fresh events at score ≥ 3 over the window. The six-month win-rate lift by threshold runs ${seq}, so it ${shape}.`;
+  } else {
+    html += `<br><b>Caveats:</b> only n=${r3.n} fresh events at score ≥ 3 over the window, so the win rate carries a binomial standard error near ±10pp. ` +
+      `The six-month win-rate lift by threshold runs ${seq}, so it ${shape} — treat as suggestive, not a confirmed standalone ≥3 timing trigger.`;
+  }
+  el.innerHTML = html;
 }
 
 function renderFormation(d) {
@@ -518,6 +607,7 @@ load().then(d => {
   renderBanner(d);
   renderStaleness(d);
   renderScope(d);
+  renderUsage(d);
   renderStatus(d);
   renderLastSignal(d);
   renderCharts(d);
@@ -526,7 +616,7 @@ load().then(d => {
   renderFormation(d);
   renderMethod(d);
   document.getElementById("foot").innerHTML =
-    "Generated " + (d.generated_utc || "—") + " · research artefact, not investment advice · single-source S&P 500 proxy breadth";
+    "Generated " + (d.generated_utc || "—") + " · data layer: " + providerLabel(d) + " · research artefact, not investment advice · S&P 500 constituent proxy for NYSE breadth";
 }).catch(e => {
   document.getElementById("status").innerHTML =
     `<div class="empty">No data yet. Run <code>python scripts/pipeline.py</code> (or <code>--self-test</code>) to populate, then reload.</div>`;

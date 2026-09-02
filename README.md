@@ -5,13 +5,18 @@ study for the broad US market. It is the bullish mirror of the
 `equity-defense-dashboard`: where that project detects when to go defensive,
 this one quantifies how strongly market breadth is confirming a turn upward.
 
-**Status:** Phase 0 — first real, survivorship-correct run completed
-(2026-06-01). Point-in-time iShares CSP1 membership applied, so the effective
-study window is **2018-01 to 2026-05 (~2,109 trading days)**: before the first
-2018 CSP1 snapshot the membership mask has no members, so 1999–2017 carries no
-breadth and is excluded by the thin-breadth guard. Both published breadth-thrust
-anchors (2019-01-04, 2023-11-03) are detected without tuning. Headline verdict
-is suggestive but not confirmed — see below.
+**Status:** live meter on the **Norgate daily point-in-time layer since
+2026-09-02** (cutover per `reviews/2026-08-13_norgate-live-meter-scope.md`,
+cutover addendum). The published window is **1990-12-28 → live** (8,983
+trading days at cutover, members per day 498–507, zero unfetchable
+ever-members) and the page's tables are restated to that basis, with the
+restatement disclosed beside the numbers. The Phase 0 record below (first
+survivorship-correct run, 2026-06-01, CSP1 weekly snapshots + Yahoo, window
+2018-01 to 2026-05, ~2,109 trading days) stands as filed with the WS7 erratum;
+its figures no longer appear on the page. Both published breadth-thrust
+anchors (2019-01-04, 2023-11-03) are detected without tuning on either layer.
+The ≥3 / six-month standalone trigger is REJECTED (WS7, held-out) and the tilt
+is not deployable (WS8) — see below.
 
 Personal research artefact. Not investment advice. Not affiliated with any
 regulated fund.
@@ -78,6 +83,12 @@ horizon (1w, 1m, 3m, 6m, 12m):
 3. **A meaningless comparison** — a bare win rate with no baseline. Mitigated by
    the bootstrap baseline and lift table; the dashboard never shows a
    conditional number without its baseline.
+4. **A page describing a different layer than the one that built it** (added
+   at the 2026-09-02 cutover). The provider tag and the 1990-12-28 window start
+   are pinned by the weekly refresh guards, and every layer-specific sentence
+   on the page reads `data_quality.provider` from the payload rather than
+   assuming a layer, so a fallback build cannot render under the Norgate
+   disclosure or the reverse.
 
 ---
 
@@ -91,21 +102,25 @@ about, and diverge at moderate readings we do not.
 
 ### Two data layers (`pipeline.py --provider`)
 
-- **`csp1` (deployed default until cutover):** weekly iShares CSP1 snapshots +
-  Yahoo prices. Point-in-time from 2018; carries the documented residual leak
-  (delisted ever-members beyond Yahoo's reach drop from historical breadth).
-- **`norgate` (built 2026-08-13 per
-  `reviews/2026-08-13_norgate-live-meter-scope.md`, soaking):** the WS7 layer —
-  Norgate daily survivorship-free membership from 1990-01-02 with full
-  delisted history; TOTALRETURN close for direction/MAs/ranges, NONE-basis
-  raw volume for D4; window opens 1990-12-28 after the 252-day burn-in.
-  Vendor series live outside the repo (`C:\dev\.norgate-store\`, licence:
-  personal-use-only, public surface carries derived aggregates only). The
-  Saturday refresh runs an alert-only **parallel run** (`parallel_run.py`)
-  comparing the Norgate candidate against the published build at the live
-  edge; cutover flips the wrapper to `--provider norgate` after 1–2 clean
-  Saturdays and restates the published tables to the WS7-layer numbers, with
-  the restatement disclosed on the page.
+- **`norgate` (DEPLOYED since 2026-09-02):** the WS7 layer — Norgate daily
+  survivorship-free membership from 1990-01-02 with full delisted history;
+  TOTALRETURN close for direction/MAs/ranges, NONE-basis raw volume for D4;
+  window opens 1990-12-28 after the 252-day burn-in. Vendor series live
+  outside the repo (`C:\dev\.norgate-store\`, licence: personal-use-only, the
+  public surface carries derived aggregates only). Built 2026-08-13 per
+  `reviews/2026-08-13_norgate-live-meter-scope.md`; soaked by an alert-only
+  parallel run against the CSP1 publish (CLEAN 2026-08-22, 2026-08-27,
+  2026-08-29); cut over 2026-09-02 (owner decision FLIP), restating the
+  published tables to this basis with the restatement disclosed on the page.
+- **`csp1` (flagged fallback, the argparse default when no flag is given):**
+  weekly iShares CSP1 snapshots + Yahoo prices. Point-in-time from 2018;
+  carries the documented residual leak (delisted ever-members beyond Yahoo's
+  reach drop from historical breadth — 110 of 725 at its last publish,
+  2026-08-28). Its survivorship banner and residual-leak note are dormant, not
+  deleted: they render whenever a csp1 payload governs the page. **A bare
+  `python scripts/pipeline.py` therefore rebuilds the FALLBACK layer over the
+  deployed outputs** — pass `--provider norgate` for any manual rebuild of the
+  live page.
 
 ### Point-in-time membership (survivorship mitigation)
 
@@ -137,7 +152,12 @@ pip install -r requirements.txt
 # Renders to data/_selftest/ and docs/_selftest/ — never over the real outputs:
 python scripts/pipeline.py --self-test
 
-# Full run (network-bound; run locally, as breadth-thrust-etf does):
+# Live page (Norgate layer, NDU must be running; vendor cache outside the repo):
+python scripts/pipeline.py --provider norgate            # pull, compute, study, render
+python scripts/pipeline.py --provider norgate --no-fetch # recompute from the cache
+python scripts/pipeline.py --provider norgate --preview  # rehearse into docs/_preview/
+
+# Fallback layer (network-bound, Yahoo; NOT the deployed page since 2026-09-02):
 #   1. provide data/constituents_csp1.json (preferred) or data/universe.json
 #   2. then:
 python scripts/pipeline.py            # fetch, compute, study, render
@@ -168,10 +188,10 @@ breadth-thrust-signal/
 │   ├── data_providers.py    # csp1 layer: price + volume fetch/cache (yfinance)
 │   ├── norgate_provider.py  # norgate layer: WS7 daily PIT panel + live_panel
 │   ├── pipeline.py          # fetch -> mask -> compute -> study -> render (--provider)
-│   ├── weekly_refresh.py    # guarded Saturday refresh (roster sync / depth gate)
-│   ├── parallel_run.py      # alert-only Norgate soak harness (cutover gate)
+│   ├── weekly_refresh.py    # guarded Saturday refresh (depth gate post-cutover; roster sync on the fallback)
+│   ├── parallel_run.py      # alert-only soak harness that gated the cutover; retired from the wrapper 2026-09-02, refuses a same-layer comparison
 │   └── validate_d1.py       # cross-check D1 thrust dates vs published anchors
-├── tests/                   # engine, guards, comparator, date edges (51 tests)
+├── tests/                   # engine, guards, comparator, wrapper pin, date edges (85 tests)
 ├── data/                    # signals.json, panel_cache.json, constituents_csp1.json
 ├── template.html            # dashboard source (light theme, Plotly)
 └── docs/index.html          # built GitHub Pages output (do not edit)
@@ -289,23 +309,38 @@ overlay (a pre-2009-only effect), and a defensive-state override whose apparent
 ## Refresh cadence — live meter (2026-08-13)
 
 Owner decision: the dashboard is a **live meter**, not a static study snapshot.
-`scripts/weekly_refresh.py` (Task Scheduler task "breadth-thrust-signal weekly
-refresh", Saturday 07:00 SGT — before the 08:00 vendor gauge guard, so that
-guard cross-checks a fresh panel) syncs the point-in-time roster from
-breadth-thrust-etf, re-runs the pipeline, and publishes only when the guards
-pass: as-of within 3 completed NYSE sessions, study window extended with the
-data, survivorship flag still false, valid-constituent floor cleared, test
-suite green. A failed run publishes nothing — the deployed page keeps its last
-good build, and its client-side banner turns amber once the data is more than
-9 calendar days old. The heartbeat is watched by the vault fleet watch on the
-"Weekly refresh" commit.
+`scripts/weekly_refresh.py --provider norgate` (Task Scheduler task
+"breadth-thrust-signal weekly refresh" via `scripts/run_weekly_refresh.bat`,
+Saturday 07:00 SGT — before the 08:00 vendor gauge guard, so that guard
+cross-checks a fresh panel) runs the **depth gate** (NDU ready and no more
+than 7 days old, $SPX history reaching 1991-01-01 or earlier, at least 15,000
+symbols in the delisted archive — the ways the extended window could silently
+shorten or re-acquire survivorship bias), re-runs the pipeline on the Norgate
+layer, and publishes only when the output guards pass: as-of within 3
+completed NYSE sessions, study window extended with the data, survivorship
+flag still false, valid-constituent floor (400) cleared, **provider tag
+`norgate-pit` and window start 1990-12-28 pinned**, test suite green. A failed
+run publishes nothing — the deployed page keeps its last good build, and its
+client-side banner turns amber once the data is more than 9 calendar days
+old. The heartbeat is watched by the vault fleet watch on the "Weekly refresh"
+commit (row "breadth-signal weekly refresh", 168 h).
 
-After a successful publish the wrapper also runs the **Norgate parallel run**
-(alert-only, `data_local/` only — see the Data section): the cutover candidate
-is built and guard-checked every Saturday until the soak clears. In
-`--provider norgate` mode (post-cutover) the roster-sync step becomes the
-depth gate (NDU readiness and age, $SPX reach, delisted-archive floor) and
-the output guards additionally pin the provider tag and the 1990-12-28
-window start.
+**Cut over 2026-09-02.** Until then the wrapper ran the CSP1 layer (roster
+sync from breadth-thrust-etf, 45-day roster-age guard) and, after each
+successful publish, the alert-only **Norgate parallel run** that soaked the
+cutover candidate against the published build at the live edge. The parallel
+run is retired from the wrapper: with the Norgate layer deployed it would
+compare the candidate against itself, so `parallel_run.py` now refuses a
+same-layer comparison and stays in the repo only for a future cross-layer
+soak. To fall back, run the wrapper command without `--provider norgate`: the
+roster sync and roster-age guard return, and the page renders the csp1
+provenance and survivorship banners from the payload.
 
-*Last updated: 2026-08-13*
+One consequence recorded in the scope memo: the Saturday 08:00 vendor gauge
+guard (`weekly_vendor_guard.py`, self-computed panel vs Norgate precomputed
+internals) no longer has an independent source on either side. It still
+catches roster and aggregation faults; a vendor-wide fault is the depth gate's
+job. The live meter is now NDU-dependent, which feeds the December 2026
+Norgate renewal decision.
+
+*Last updated: 2026-09-02*

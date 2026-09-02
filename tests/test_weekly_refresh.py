@@ -99,6 +99,18 @@ def test_roster_age_year_boundary_fires():
 # --- norgate provider mode ---------------------------------------------------
 
 
+def test_wrapper_runs_the_norgate_provider_without_the_parallel_run():
+    """The 2026-09-02 cutover lives in one line of the schtask wrapper. Pin it:
+    the live command must carry --provider norgate, and the retired parallel
+    run must not be chained (post-cutover it would compare the candidate
+    against itself). Comment lines (rem) are ignored."""
+    bat = (Path(__file__).resolve().parent.parent / "scripts" / "run_weekly_refresh.bat")
+    live = [ln for ln in bat.read_text(encoding="utf-8").splitlines()
+            if ln.strip() and not ln.strip().lower().startswith("rem")]
+    assert any("weekly_refresh.py" in ln and "--provider norgate" in ln for ln in live), live
+    assert not any("parallel_run.py" in ln for ln in live), live
+
+
 def norgate_payload():
     return {
         "survivorship_bias": False,

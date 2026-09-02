@@ -10,10 +10,35 @@ import sys
 from pathlib import Path
 
 import pandas as pd
+import pytest
 
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent / "scripts"))
 
-from parallel_run import EDGE_DAYS, compare_edge  # noqa: E402
+from parallel_run import EDGE_DAYS, assert_cross_layer, compare_edge  # noqa: E402
+
+
+# ---------------------------------------------------------------------------
+# Post-cutover: the harness must refuse to compare the candidate against itself
+# ---------------------------------------------------------------------------
+
+def test_same_layer_comparison_is_refused():
+    """After the 2026-09-02 cutover the deployed payload carries the candidate's
+    own provider tag. An edge comparison would then agree by construction and a
+    CLEAN verdict would certify nothing, so the harness must raise before any
+    record can be written."""
+    deployed = {"data_quality": {"provider": "norgate-pit"}, "timeline": {}}
+    with pytest.raises(ValueError, match="against itself"):
+        assert_cross_layer(deployed)
+
+
+def test_cross_layer_comparison_is_allowed():
+    assert assert_cross_layer({"data_quality": {"provider": "csp1-yahoo"}}) == "csp1-yahoo"
+
+
+def test_missing_provider_tag_is_not_treated_as_same_layer():
+    # A payload with no provenance is an older csp1 build; it is a legitimate
+    # (if poorly labelled) other side, not a self-comparison.
+    assert assert_cross_layer({"data_quality": {}}) is None
 
 
 def make_sides(n=15):

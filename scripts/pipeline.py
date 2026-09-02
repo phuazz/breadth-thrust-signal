@@ -2,17 +2,19 @@
 
 Canonical build entry point (per vault convention: pipeline.py, not build.py):
 
-    python scripts/pipeline.py                 # full run, render dashboard
-    python scripts/pipeline.py --no-fetch      # recompute from cached panel only
+    python scripts/pipeline.py                 # full run on the deployed layer, render dashboard
+    python scripts/pipeline.py --no-fetch      # recompute from the cached panel only
+    python scripts/pipeline.py --provider csp1 # the flagged fallback layer (CSP1 snapshots + Yahoo)
     python scripts/pipeline.py --self-test     # synthetic smoke test -> scratch dirs
 
 Stages
 ------
-1. Resolve membership. Provider-switched (``--provider``): the deployed
-   default ``csp1`` uses point-in-time CSP1 snapshots if present (else a
-   current-list fallback with a loud survivorship flag); ``norgate`` uses the
-   WS7 daily point-in-time layer (norgate_provider.live_panel — window opens
-   1990-12-28 after the 252-day burn-in, vendor cache outside the repo).
+1. Resolve membership. Provider-switched (``--provider``): ``norgate`` — the
+   default since the 2026-09-02 cutover — uses the WS7 daily point-in-time
+   layer (norgate_provider.live_panel — window opens 1990-12-28 after the
+   252-day burn-in, vendor cache outside the repo); ``csp1`` is the flagged
+   fallback and uses point-in-time CSP1 snapshots if present (else a
+   current-list fallback with a loud survivorship flag).
 2. Fetch / update the constituent price+volume panel (cached).
 3. Build breadth panels -> grouped/weighted composite (compute_breadth).
 4. Conditional forward-return study with bootstrap baseline (forward_returns).
@@ -59,6 +61,12 @@ SELFTEST_DOCS = DOCS / "_selftest"
 BENCHMARK = "^GSPC"           # SPX level for the forward-return study
 START = "1999-01-01"          # burn-in for 252-day lookbacks
 PIT_SNAPSHOTS = DATA / "constituents_csp1.json"   # optional point-in-time source
+
+# Deployed data layer. Flipped from "csp1" to "norgate" on 2026-09-02 (owner
+# instruction, the same day as the live-meter cutover) so that a bare run
+# builds the layer the page publishes rather than the fallback over it.
+# "csp1" stays selectable as the flagged fallback.
+DEFAULT_PROVIDER = "norgate"
 
 logging.basicConfig(level=logging.INFO, format="%(message)s")
 log = logging.getLogger("pipeline")
@@ -402,10 +410,11 @@ def main() -> int:
     ap.add_argument("--self-test", action="store_true", help="synthetic end-to-end run")
     ap.add_argument("--tickers", default=str(DATA / "universe.json"),
                     help="JSON list of tickers for the fallback static universe")
-    ap.add_argument("--provider", choices=("csp1", "norgate"), default="csp1",
-                    help="data layer: csp1 = CSP1 snapshots + Yahoo (deployed "
-                         "default until cutover); norgate = WS7 daily "
-                         "point-in-time layer (window opens 1990-12-28)")
+    ap.add_argument("--provider", choices=("csp1", "norgate"), default=DEFAULT_PROVIDER,
+                    help="data layer: norgate = WS7 daily point-in-time layer "
+                         "(deployed since 2026-09-02, the default; window opens "
+                         "1990-12-28); csp1 = CSP1 snapshots + Yahoo (the "
+                         "flagged fallback)")
     ap.add_argument("--preview", action="store_true",
                     help="render into data/_preview and docs/_preview instead "
                          "of the deployed outputs — a real-data rehearsal that "

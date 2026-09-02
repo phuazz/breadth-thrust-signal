@@ -16,6 +16,7 @@ from pathlib import Path
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent / "scripts"))
 
 from weekly_refresh import (  # noqa: E402
+    DEFAULT_PROVIDER,
     NDU_MAX_AGE_DAYS,
     NORGATE_MIN_DELISTED_DB,
     ROSTER_MAX_AGE_DAYS,
@@ -27,6 +28,29 @@ from weekly_refresh import (  # noqa: E402
 
 NOW = datetime(2026, 8, 13, 12, 0, tzinfo=timezone.utc)
 ROSTER_FRESH = "2026-08-07"
+
+
+# --- the deployed layer is the default (flipped 2026-09-02, owner instruction) --
+
+
+def test_default_provider_is_the_deployed_layer():
+    """A bare run must build the layer the page publishes, not the fallback
+    over it — in the pipeline, in the refresh, and in the guard function."""
+    import pipeline
+
+    assert pipeline.DEFAULT_PROVIDER == "norgate"
+    assert DEFAULT_PROVIDER == "norgate"
+
+
+def test_guard_default_fails_loud_on_a_fallback_payload():
+    """A caller that omits the provider gets the norgate pins, so a csp1
+    payload is refused rather than waved through under the looser set."""
+    p = good_payload()
+    p["data_quality"]["provider"] = "csp1-yahoo"
+    p["study"]["window"]["start"] = "2019-01-07"
+    fails = check_payload(p, NOW, None, lag_fn=lag0)  # provider deliberately omitted
+    assert any("wrong layer" in f for f in fails)
+    assert any("silently shortened" in f for f in fails)
 
 
 def good_payload():
@@ -43,37 +67,37 @@ def lag0(asof, now):
 
 
 def test_clean_payload_passes():
-    assert check_payload(good_payload(), NOW, ROSTER_FRESH, lag_fn=lag0) == []
+    assert check_payload(good_payload(), NOW, ROSTER_FRESH, lag_fn=lag0, provider="csp1") == []
 
 
 def test_fires_on_stale_asof():
-    fails = check_payload(good_payload(), NOW, ROSTER_FRESH, lag_fn=lambda a, n: 5)
+    fails = check_payload(good_payload(), NOW, ROSTER_FRESH, lag_fn=lambda a, n: 5, provider="csp1")
     assert any("lags 5" in f for f in fails)
 
 
 def test_fires_on_frozen_window():
     p = good_payload()
     p["study"]["window"]["end"] = "2026-05-29"  # fresh prices, frozen study window
-    fails = check_payload(p, NOW, ROSTER_FRESH, lag_fn=lag0)
+    fails = check_payload(p, NOW, ROSTER_FRESH, lag_fn=lag0, provider="csp1")
     assert any("did not extend" in f for f in fails)
 
 
 def test_fires_on_survivorship_flag():
     p = good_payload()
     p["survivorship_bias"] = True
-    fails = check_payload(p, NOW, ROSTER_FRESH, lag_fn=lag0)
+    fails = check_payload(p, NOW, ROSTER_FRESH, lag_fn=lag0, provider="csp1")
     assert any("survivorship" in f for f in fails)
 
 
 def test_fires_on_thin_panel():
     p = good_payload()
     p["current"]["valid_count"] = 100
-    fails = check_payload(p, NOW, ROSTER_FRESH, lag_fn=lag0)
+    fails = check_payload(p, NOW, ROSTER_FRESH, lag_fn=lag0, provider="csp1")
     assert any("below floor" in f for f in fails)
 
 
 def test_fires_on_old_roster():
-    fails = check_payload(good_payload(), NOW, "2026-06-01", lag_fn=lag0)
+    fails = check_payload(good_payload(), NOW, "2026-06-01", lag_fn=lag0, provider="csp1")
     assert any("roster" in f for f in fails)
 
 
@@ -83,7 +107,7 @@ def test_roster_age_month_boundary_no_fire():
     p = good_payload()
     p["current"]["as_of"] = "2026-02-27"
     p["study"]["window"]["end"] = "2026-02-27"
-    assert check_payload(p, now, "2026-01-31", lag_fn=lag0) == []
+    assert check_payload(p, now, "2026-01-31", lag_fn=lag0, provider="csp1") == []
 
 
 def test_roster_age_year_boundary_fires():
@@ -92,7 +116,7 @@ def test_roster_age_year_boundary_fires():
     p = good_payload()
     p["current"]["as_of"] = "2026-12-31"
     p["study"]["window"]["end"] = "2026-12-31"
-    fails = check_payload(p, now, "2026-11-01", lag_fn=lag0)
+    fails = check_payload(p, now, "2026-11-01", lag_fn=lag0, provider="csp1")
     assert any(str(ROSTER_MAX_AGE_DAYS) in f for f in fails)
 
 

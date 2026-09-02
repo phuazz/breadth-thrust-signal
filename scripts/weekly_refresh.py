@@ -10,19 +10,20 @@ scripts/run_weekly_refresh.bat, logging to data_local/refresh.log.
 
 Steps, in order — any failure stops the run BEFORE anything is committed:
 
-1. Roster sync (csp1 mode). Copy ../breadth-thrust-etf/data/constituents_csp1.json
-   (the point-in-time CSP1 snapshots that repo's local refresh maintains) over
-   our copy, but only after validating it: it must parse, carry at least as
-   many snapshots as ours, and extend at least as far. A missing or invalid
-   source is a warning, not a failure — the pipeline forward-fills the last
-   roster — but a roster older than ROSTER_MAX_AGE_DAYS is a hard failure,
-   because a long-static roster quietly reintroduces the survivorship drift
-   the point-in-time design exists to remove.
-   In --provider norgate mode (post-cutover) this step is the DEPTH GATE
-   instead: NDU readiness, store age, $SPX reach and the delisted-archive
-   floor (check_depth) — the ways the extended window could silently shorten
-   or re-acquire survivorship bias. The output guards then additionally pin
-   the payload provider tag and the 1990-12-28 window start.
+1. Depth gate (norgate mode — the default since the 2026-09-02 cutover): NDU
+   readiness, store age, $SPX reach and the delisted-archive floor
+   (check_depth) — the ways the extended window could silently shorten or
+   re-acquire survivorship bias. The output guards then additionally pin the
+   payload provider tag and the 1990-12-28 window start.
+   In --provider csp1 mode (the flagged fallback) this step is the ROSTER
+   SYNC instead. Copy ../breadth-thrust-etf/data/constituents_csp1.json (the
+   point-in-time CSP1 snapshots that repo's local refresh maintains) over our
+   copy, but only after validating it: it must parse, carry at least as many
+   snapshots as ours, and extend at least as far. A missing or invalid source
+   is a warning, not a failure — the pipeline forward-fills the last roster —
+   but a roster older than ROSTER_MAX_AGE_DAYS is a hard failure, because a
+   long-static roster quietly reintroduces the survivorship drift the
+   point-in-time design exists to remove.
 2. Pipeline. python scripts/pipeline.py (full fetch + rebuild).
 3. Output guards (check_payload): the rebuilt signals.json must be current to
    within MAX_SESSION_LAG completed NYSE sessions, the study window must have
@@ -67,8 +68,10 @@ ROSTER_MAX_AGE_DAYS = 45   # hard stop: a roster this stale is survivorship drif
 TRACKED_OUTPUTS = ["data/signals.json", "docs/index.html", "data/constituents_csp1.json",
                    "data/state.json"]
 
-# --- Norgate provider mode (build 2026-08-13 per the scope memo; cutover
-# --- flips the schtask wrapper to --provider norgate after a clean soak) ----
+# --- Norgate provider mode (build 2026-08-13 per the scope memo; the schtask
+# --- wrapper flipped to --provider norgate at the 2026-09-02 cutover and the
+# --- CLI default followed the same day on owner instruction) ---------------
+DEFAULT_PROVIDER = "norgate"         # csp1 stays selectable as the flagged fallback
 NORGATE_WINDOW_START = "1990-12-28"  # deterministic: 252-session burn-in from
                                      # the 1990-01-02 membership start; drift
                                      # here means silent history loss
@@ -226,14 +229,17 @@ def nyse_session_lag(asof: str, now_utc: datetime) -> int:
 
 
 def check_payload(payload: dict, now_utc: datetime, roster_last: str,
-                  lag_fn=nyse_session_lag, provider: str = "csp1") -> list[str]:
+                  lag_fn=nyse_session_lag, provider: str = DEFAULT_PROVIDER) -> list[str]:
     """Return the list of guard failures (empty means publishable).
 
-    csp1 mode is byte-for-byte the deployed guard set. norgate mode swaps the
-    roster-age check (no roster is involved) for two pins: the payload must
-    self-identify as the norgate-pit layer, and the study window must open at
-    NORGATE_WINDOW_START — a later start is silent history loss, the failure
-    a naive freshness check cannot see.
+    norgate mode (deployed since 2026-09-02, and the default here so that a
+    caller who omits the provider gets the stricter set and fails LOUD on a
+    csp1 payload rather than passing it) swaps the roster-age check (no
+    roster is involved) for two pins: the payload must self-identify as the
+    norgate-pit layer, and the study window must open at NORGATE_WINDOW_START
+    — a later start is silent history loss, the failure a naive freshness
+    check cannot see. csp1 mode is the pre-cutover guard set, retained
+    byte-for-byte for the fallback.
     """
     fails: list[str] = []
     cur = payload.get("current", {})
@@ -310,9 +316,11 @@ def main() -> int:
     ap = argparse.ArgumentParser(description=__doc__)
     ap.add_argument("--source-roster", default=str(DEFAULT_SOURCE_ROSTER))
     ap.add_argument("--no-push", action="store_true", help="build and guard, do not push")
-    ap.add_argument("--provider", choices=("csp1", "norgate"), default="csp1",
-                    help="data layer for the rebuild; cutover flips the "
-                         "wrapper to norgate after a clean parallel-run soak")
+    ap.add_argument("--provider", choices=("csp1", "norgate"), default=DEFAULT_PROVIDER,
+                    help="data layer for the rebuild: norgate (deployed since "
+                         "2026-09-02, the default: depth gate + provider and "
+                         "window-start pins) or csp1 (the flagged fallback: "
+                         "roster sync + roster-age guard)")
     args = ap.parse_args()
 
     now = datetime.now(timezone.utc)

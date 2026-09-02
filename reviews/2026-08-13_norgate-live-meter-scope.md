@@ -205,9 +205,12 @@ on the new layer: Sat 2026-09-05 07:00 SGT (weekday verified), as-of Fri
 2026-09-04.
 
 **Open, harvested to `NEXT.md`.** (a) `pipeline.py` and `weekly_refresh.py`
-keep `csp1` as the argparse default, so a bare manual run rebuilds the
-fallback over the live page — a one-line flip if the deployed layer should be
-the default. (b) The fallback path is unexercised from here; its roster sync
+kept `csp1` as the argparse default at cutover, so a bare manual run would
+have rebuilt the fallback over the live page — **RESOLVED the same day on
+owner instruction**: both defaults flipped to `norgate`, `--provider csp1`
+selects the fallback, and the guard function defaults to the norgate pins so
+a fallback payload checked without an explicit provider fails loud (two tests
+pin it; follow-up commit of 2026-09-02). (b) The fallback path is unexercised from here; its roster sync
 and 45-day roster-age guard still work, but yfinance retracted closes on
 2026-08-28 (breadth-thrust-etf), so a fallback publish would need its own
 check first. (c) The December 2026 Norgate renewal is now load-bearing for the

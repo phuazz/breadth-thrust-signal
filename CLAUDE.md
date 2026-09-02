@@ -26,8 +26,11 @@ design.
 - **Forward-return claims always carry their baseline.** Never present a
   conditional win rate or median without the unconditional bootstrap baseline
   and the lift. A number without its base rate is misleading.
-- **Survivorship discipline.** Prefer point-in-time CSP1 snapshots. If the
-  fallback static universe is used, the `survivorship_bias` flag must stay
+- **Survivorship discipline.** The deployed layer is Norgate daily
+  point-in-time membership with full delisted history (since the 2026-09-02
+  cutover; the CLI default). The CSP1 weekly snapshots are the flagged
+  fallback's point-in-time source (`--provider csp1`). If the static-universe
+  fallback beneath that is ever used, the `survivorship_bias` flag must stay
   visible in both `signals.json` and the dashboard banner.
 - **Volume is unadjusted.** Direction and MAs use adjusted close; the up-volume
   ratio uses raw volume. Do not mix these.
@@ -36,7 +39,10 @@ design.
 
 - `template.html` is the source. **Never edit `docs/index.html`** — it is built.
 - Light theme, sans-serif, high contrast.
-- Build: `python scripts/pipeline.py` (canonical, not `build.py`).
+- Build: `python scripts/pipeline.py` (canonical, not `build.py`). Builds the
+  Norgate layer by default since 2026-09-02 (NDU must be running; vendor
+  series stay in `C:\dev\.norgate-store\`); `--provider csp1` is the flagged
+  fallback and needs the CSP1 roster.
 - **The page is a LIVE METER** (owner decision 2026-08-13). The weekly guarded
   refresh is `scripts/weekly_refresh.py` (schtask Sat 07:00 SGT); it must never
   publish with a guard failing, and the client-side staleness banner
@@ -50,4 +56,4 @@ thrust detection on planted synthetic surges, score bounds, the OR-within-
 dimension invariant, the no-lookahead lag, and date edge cases (month and year
 boundaries via a date library).
 
-*Last updated: 2026-08-13*
+*Last updated: 2026-09-02*

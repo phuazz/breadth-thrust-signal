@@ -112,15 +112,17 @@ about, and diverge at moderate readings we do not.
   parallel run against the CSP1 publish (CLEAN 2026-08-22, 2026-08-27,
   2026-08-29); cut over 2026-09-02 (owner decision FLIP), restating the
   published tables to this basis with the restatement disclosed on the page.
-- **`csp1` (flagged fallback, the argparse default when no flag is given):**
-  weekly iShares CSP1 snapshots + Yahoo prices. Point-in-time from 2018;
-  carries the documented residual leak (delisted ever-members beyond Yahoo's
-  reach drop from historical breadth — 110 of 725 at its last publish,
-  2026-08-28). Its survivorship banner and residual-leak note are dormant, not
-  deleted: they render whenever a csp1 payload governs the page. **A bare
-  `python scripts/pipeline.py` therefore rebuilds the FALLBACK layer over the
-  deployed outputs** — pass `--provider norgate` for any manual rebuild of the
-  live page.
+- **`csp1` (flagged fallback, selected with `--provider csp1`):** weekly
+  iShares CSP1 snapshots + Yahoo prices. Point-in-time from 2018; carries the
+  documented residual leak (delisted ever-members beyond Yahoo's reach drop
+  from historical breadth — 110 of 725 at its last publish, 2026-08-28). Its
+  survivorship banner and residual-leak note are dormant, not deleted: they
+  render whenever a csp1 payload governs the page. The CLI default in both
+  `pipeline.py` and `weekly_refresh.py` is `norgate` (flipped 2026-09-02 on
+  owner instruction, the same day as the cutover), so a bare
+  `python scripts/pipeline.py` builds the deployed layer; the guard function
+  defaults to the norgate pins as well, so a fallback payload checked without
+  an explicit provider fails loud instead of passing under the looser set.
 
 ### Point-in-time membership (survivorship mitigation)
 
@@ -152,16 +154,16 @@ pip install -r requirements.txt
 # Renders to data/_selftest/ and docs/_selftest/ — never over the real outputs:
 python scripts/pipeline.py --self-test
 
-# Live page (Norgate layer, NDU must be running; vendor cache outside the repo):
-python scripts/pipeline.py --provider norgate            # pull, compute, study, render
-python scripts/pipeline.py --provider norgate --no-fetch # recompute from the cache
-python scripts/pipeline.py --provider norgate --preview  # rehearse into docs/_preview/
+# Live page (Norgate layer, the default; NDU must be running; vendor cache outside the repo):
+python scripts/pipeline.py            # pull, compute, study, render
+python scripts/pipeline.py --no-fetch # recompute from the cache
+python scripts/pipeline.py --preview  # rehearse into docs/_preview/ (never over the live page)
 
-# Fallback layer (network-bound, Yahoo; NOT the deployed page since 2026-09-02):
+# Fallback layer (CSP1 snapshots + Yahoo, network-bound; NOT the deployed page since 2026-09-02):
 #   1. provide data/constituents_csp1.json (preferred) or data/universe.json
 #   2. then:
-python scripts/pipeline.py            # fetch, compute, study, render
-python scripts/pipeline.py --no-fetch # recompute from cached panel only
+python scripts/pipeline.py --provider csp1            # fetch, compute, study, render
+python scripts/pipeline.py --provider csp1 --no-fetch # recompute from cached panel only
 
 # Local preview of the dashboard:
 npx serve docs
@@ -332,9 +334,10 @@ cutover candidate against the published build at the live edge. The parallel
 run is retired from the wrapper: with the Norgate layer deployed it would
 compare the candidate against itself, so `parallel_run.py` now refuses a
 same-layer comparison and stays in the repo only for a future cross-layer
-soak. To fall back, run the wrapper command without `--provider norgate`: the
-roster sync and roster-age guard return, and the page renders the csp1
-provenance and survivorship banners from the payload.
+soak. To fall back, run `weekly_refresh.py --provider csp1` (the wrapper
+passes `--provider norgate` explicitly, and `norgate` is also the CLI default
+since 2026-09-02): the roster sync and roster-age guard return, and the page
+renders the csp1 provenance and survivorship banners from the payload.
 
 One consequence recorded in the scope memo: the Saturday 08:00 vendor gauge
 guard (`weekly_vendor_guard.py`, self-computed panel vs Norgate precomputed

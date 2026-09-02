@@ -477,4 +477,23 @@ question of whether it is monetisable in a *small-cap* vehicle (rather than as
 an SPX tilt) has not been asked. That needs its own pre-registration and should
 not be bolted onto this one.
 
-*Last updated: 2026-08-01.*
+---
+
+## Live-meter cutover to the Norgate layer, 2026-09-02
+
+Not a study. The public page moved from the CSP1/Yahoo layer to the WS7
+Norgate point-in-time layer (owner decision FLIP on three clean parallel runs:
+2026-08-22, 2026-08-27, 2026-08-29), and the restatement is disclosed on the
+page beside the numbers. The reconciliation table, the rendered-page
+measurements and the operational changes are in the cutover addendum of
+`reviews/2026-08-13_norgate-live-meter-scope.md`. What matters for this memo:
+the live ≥3 / six-month cell reproduces H2 exactly (n = 46, win 76.1 %,
+median +7.69 %) and the page states the WS7 verdict beside it; the Phase 0 and
+WS4-H2 thrust-row figures (n = 14; +23.05 % at 12 months) have left the public
+page and stand here with their erratum; the ≥3 cells at 1m and 12m render
+with their noise badges and the FLAGGED-no-action status stated beside them.
+Thresholds, the four-dimension grouping, the 60-day memory and the one-day lag
+are unchanged. Commits `06e814b` (cutover) and `4fc3e54` (first Norgate-layer
+publish, as of 2026-09-01).
+
+*Last updated: 2026-09-02.*

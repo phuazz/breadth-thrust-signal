@@ -516,4 +516,10 @@ filed in the vault ledger of 2026-09-02 with records
 `forward_returns.HORIZONS` keeps its five horizons and no engine module moved
 (the lab imported them at pinned hashes).
 
-*Last updated: 2026-09-02.*
+**Amended 2026-09-17 (owner decision):** the closure of the 6–9-month question is
+lifted; the retirement stands. The 6m rows on the 400 and 600 are a logged look
+(discovery-grade), 9m was never computed on any panel, and a successor registers
+through a new kickoff that declares the look (vault doctrine D1/D7;
+`KICKOFF_ws9-thrust-medium-horizon.md` §9; ledger row 2026-09-02 AMENDED).
+
+*Last updated: 2026-09-17.*

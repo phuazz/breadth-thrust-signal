@@ -504,8 +504,8 @@ publish, as of 2026-09-01).
 proposed a 6–9-month tilt hold on the ≥3 signal against the WS8 cost-matched
 random-entry null, with the S&P 600 and Russell 2000 as fresh out-of-sample
 universes at those horizons. It sat pending sign-off and was never run. Retired
-by owner decision on 2026-09-02; the reasons and the reopen condition are its
-§9 and the vault ledger row of the same date. Recorded here so the question is
+by owner decision on 2026-09-02; the reasons are its §9 and the vault ledger
+row of the same date. Recorded here so the question is
 not rediscovered as if new: the tilt family is dead at every hold tested (WS8),
 the 6m event-study trigger is rejected (WS7), and the small- and mid-cap panels
 are now seen at 1m, 3m and 12m after `smallcap-thrust-lab` PREREG-1 — a
@@ -516,8 +516,8 @@ filed in the vault ledger of 2026-09-02 with records
 `forward_returns.HORIZONS` keeps its five horizons and no engine module moved
 (the lab imported them at pinned hashes).
 
-**Amended 2026-09-17 (owner decision):** the closure of the 6–9-month question is
-lifted; the retirement stands. The 6m rows on the 400 and 600 are a logged look
+**Amended 2026-09-17 (owner decision):** the closure clause on the 6–9-month
+question is deleted; the question is open and the retirement stands. The 6m rows on the 400 and 600 are a logged look
 (discovery-grade), 9m was never computed on any panel, and a successor registers
 through a new kickoff that declares the look (vault doctrine D1/D7;
 `KICKOFF_ws9-thrust-medium-horizon.md` §9; ledger row 2026-09-02 AMENDED).

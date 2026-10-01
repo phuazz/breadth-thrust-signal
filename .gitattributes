@@ -1,1 +1,5 @@
 *.bat text eol=crlf
+spec/*.json text eol=lf
+tests/fixtures/ws10/* text eol=lf
+PREREG_thrust-subconditions.md text eol=lf
+PROMPT_RUN_ws10.md text eol=lf

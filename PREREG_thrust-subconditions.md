@@ -2,7 +2,7 @@
 
 **Frozen 2026-10-01 (Thursday, library-verified) at the commit tagged `prereg-freeze` in this repository; the
 freeze commit hash and the spec sha256 are stamped into this header by the follow-up commit (the house pattern):
-freeze commit `<stamped by the follow-up commit>`, spec sha256 `<stamped by the follow-up commit>`.** Nothing in
+freeze commit `<stamped by the follow-up commit>`, spec sha256 `b805afaf4f02988bf9d1e7b83d0f7ed4d41696a327b610371d8b78e936b13f33`.** Nothing in
 this file, in `spec/ws10_prereg_spec.json` or in `tests/` may change after the tag. A different question is a new
 registration. The vault-root kickoff `C:\dev\KICKOFF_thrust-subconditions.md` is the design record; where the two
 differ, this file governs, and every value the engine reads lives in `spec/ws10_prereg_spec.json` and nowhere else —

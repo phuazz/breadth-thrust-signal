@@ -522,4 +522,48 @@ question is deleted; the question is open and the retirement stands. The 6m rows
 through a new kickoff that declares the look (vault doctrine D1/D7;
 `KICKOFF_ws9-thrust-medium-horizon.md` §9; ledger row 2026-09-02 AMENDED).
 
-*Last updated: 2026-09-17.*
+---
+
+## WS10 — thrust-subconditions, registered and FROZEN 2026-10-01 (not run)
+
+**Provenance.** Design record `C:\dev\KICKOFF_thrust-subconditions.md` (owner sign-off 2026-09-18;
+ledger check re-run 2026-10-01, vault-docs `1e8d1c8`). Registration `PREREG_thrust-subconditions.md`
+with `spec/ws10_prereg_spec.json` (sha256 `b805afaf…`), frozen at `5e31a21`, tag `prereg-freeze`,
+header stamped at `c4ce682`. Context: Personal. Red-team review at the spec-freeze gate filed in
+`reviews/red-team_spec-freeze_2026-10-01.md`.
+
+**Question.** Do two sub-conditions the meter does not carry — the deGraaf share of members at a
+20-session closing high (at or above 55.0 per cent, inside D3) and the share above the 10-session
+average (at or above 90.0, inside D2), thresholds frozen at NDR's published levels as priors — add
+information as OR-members? Layer A only. The four-dimension rule, the canonical thresholds, the one-day
+lag, the Summation exclusion and the 60-session memory are unchanged; only a PROPOSE verdict could open
+a separate owner-approved engine-change commit with its own MOBILE_CHECK pass.
+
+**What is frozen.** Three hypotheses (H-S1 and H-S2 standalone; H-M the meter on the ADDED ≥2 events
+with both candidates admitted); a count-matched, cluster-structured null per cell with a pinned
+sequential sampler (2,000 draws, seed 19901228 keyed per cell, complete windows on the return series);
+Holm across {1m, 3m, 6m} per hypothesis per half, 3m primary, both legs; the redundancy and placement
+gate (5-session co-fires in either direction; REDUNDANT above 70 per cent on the own dimension,
+MISPLACED when D4 exceeds it); power at +2.0pp per 3 months keyed to a 0.80 demotion and a 0.50 THIN
+suffix; Step 0 probes P0-1 to P0-8, FAIL_STOP, no outcome statistic; a planted deterministic 800-name
+fixture, 29 drill tests that reject a committed wrong engine, and 29 contract test functions (41 items)
+for the unbuilt engine, proven satisfiable against a scratch reference engine (46 of 46; not committed).
+
+**What the review established before the tag.** At the keyed +2.0pp the two-leg clause's power is
+near its size at any plausible count (the reviewer's Monte Carlo: 0.00 to 0.16 at 15 to 50 clusters),
+so FAIL is not expected to be reachable: the study can say "yes" or "already carried" and defers "no"
+to accrual under a fresh registration. The keyed delta is the kickoff's and was kept with the
+consequence stated; the owner's alternatives (a prior-scaled delta such as +5.0pp; the median leg
+alone; REDUNDANT on max(own, D1, D4)) are recorded in PREREG §20 as pre-results amendments if ruled.
+
+**Not done.** No forward return, event-conditional statistic or percentile for either candidate on
+any panel; no composite with a candidate admitted; no refresh of the live meter's cache; nothing on
+the page; the engine modules untouched (hashes pinned in the spec).
+
+**Run.** Booked for the bucket Thu 2026-10-01 22:00 → Thu 2026-10-08 22:00 SGT (suggested Mon
+2026-10-05 or Tue 2026-10-06 evening, after the Sat 2026-10-03 WS7 review; dates flagged for the
+owner), Opus fast from `PROMPT_RUN_ws10.md`; the Fable verdict read, the P1–P3 scoring and the filing
+follow in a separate session. Ledger kickoff row 2026-10-01; register records
+`2026-10-01-breadth-thrust-signal-1..-3` filed as PENDING placeholders until the verdict.
+
+*Last updated: 2026-10-01.*

@@ -33,9 +33,9 @@ import make_ws10_fixture as ref  # noqa: E402
 import compute_breadth as cb  # noqa: E402
 import forward_returns as fr  # noqa: E402
 
-FROZEN_SPEC_SHA256 = "fb5b61ac9d0b3fb5c907b188a5fc3a293658d3ae0ac5e722df091c901a97aafb"
+FROZEN_SPEC_SHA256 = "b805afaf4f02988bf9d1e7b83d0f7ed4d41696a327b610371d8b78e936b13f33"
 
-EXACT_THRESHOLD_DATES = {"S-D3": "2020-04-07", "S-D2": "2021-02-10"}   # 220 of 400 = 55.0; 360 of 400 = 90.0
+EXACT_THRESHOLD_DATES = {"S-D3": "2020-04-08", "S-D2": "2021-02-10"}   # 440 of 800 = 55.0; 720 of 800 = 90.0
 
 
 def _load_mutant():
@@ -54,6 +54,13 @@ def fx():
     return close, volume, panels, before, expected
 
 
+@pytest.fixture(scope="module")
+def unit():
+    sp = ref.spec()
+    ui = ref.unit_index()
+    return sp, ui, ref.unit_valid(ui), ref.unit_events(ui)
+
+
 def _dates(xs) -> list[str]:
     return [str(pd.Timestamp(x).date()) for x in xs]
 
@@ -69,7 +76,9 @@ def test_fixture_regenerates_from_the_committed_generator(fx):
     close, volume, panels, before, expected = fx
     assert ref.panel_sha256(close) == expected["panel_sha256"]
     assert close.shape == (expected["n_sessions"], expected["n_names"])
-    assert not close.isna().any().any(), "the planted panel carries no missing close"
+    assert close[ref.LATE_ENTRANT].first_valid_index() == pd.Timestamp(expected["late_entrant"]["first_close_session"])
+    gap = close[ref.INTERIOR_GAP]
+    assert gap.loc[expected["interior_gap"]["sessions"][0]: expected["interior_gap"]["sessions"][1]].isna().all()
     fresh = ref.expected(close, volume)
     assert fresh == expected, "expected.json is stale: regenerate with python tests/make_ws10_fixture.py"
 
@@ -79,7 +88,7 @@ def test_reference_values_are_the_planted_ones(fx):
     sp = ref.spec()
     below = int(sp["candidates"]["shared"]["below_sessions"])
     for member in ("S-D3", "S-D2"):
-        share = ref.share_share = ref.ref_share(close, member, sp)
+        share = ref.ref_share(close, member, sp)
         thr = float(sp["candidates"][member]["threshold_pct"])
         d = EXACT_THRESHOLD_DATES[member]
         assert share.loc[pd.Timestamp(d)] == thr, f"{member} must sit EXACTLY on {thr} at {d}"
@@ -87,10 +96,14 @@ def test_reference_values_are_the_planted_ones(fx):
         ev = ref.ref_fresh_events(share, thr, before["data_ok"], below)
         assert _dates(ev) == expected["fresh_events"][member]
         assert d in expected["fresh_events"][member]
-    # the burn-in episode crosses 55 and is refused
-    assert expected["shares"]["S-D3"]["2019-04-10"] == 60.0
-    assert "2019-04-10" not in expected["fresh_events"]["S-D3"]
-    assert pd.Timestamp("2019-04-10") < pd.Timestamp(expected["first_data_ok_session"])
+    # the burn-in episode crosses both thresholds and is refused
+    first_ok = pd.Timestamp(expected["first_data_ok_session"])
+    assert expected["shares"]["S-D3"]["2019-03-27"] >= 55.0 and expected["shares"]["S-D2"]["2019-03-27"] >= 90.0
+    assert pd.Timestamp("2019-03-27") < first_ok
+    assert "2019-03-27" not in expected["fresh_events"]["S-D3"] + expected["fresh_events"]["S-D2"]
+    # the planted gaps leave the name out of the denominator: 799 members on those sessions
+    assert expected["shares"]["S-D3"]["2020-05-06"] == 100.0 * 480 / 799
+    assert expected["shares"]["S-D3"]["2020-03-11"] == 100.0 * 40 / 799
 
 
 # ---------------------------------------------------------------- share mutants
@@ -112,9 +125,20 @@ def test_share_mutants_change_a_fresh_event_date(fx, member, fn_name):
     assert _dates(ev) != expected["fresh_events"][member], f"fixture is blind to {fn_name}"
 
 
+@pytest.mark.parametrize("fn_name", ["share_ffill", "share_denominator_present"])
+def test_gap_and_entrant_mutants_change_a_planted_share(fx, fn_name):
+    close, volume, panels, before, expected = fx
+    wrong = _load_mutant()
+    for member in ("S-D3", "S-D2"):
+        got = getattr(wrong, fn_name)(close, member)
+        want = expected["shares"][member]
+        differs = [d for d, v in want.items() if v is not None and not np.isclose(got.loc[pd.Timestamp(d)], v)]
+        assert differs, f"fixture is blind to {fn_name} on {member}"
+
+
 def test_division_first_share_misses_an_exact_threshold(fx):
-    # 220 / 400 * 100 is 55.00000000000001 while 100 * 220 / 400 is 55.0; at 360 / 400 the two forms happen
-    # to coincide, so the drill requires rejection at at least one planted exact-threshold date.
+    # 440 / 800 * 100 and 100 * 440 / 800 can differ in the last bit; the drill requires rejection at at
+    # least one planted exact-threshold date, while the contract pins exact equality at both.
     close, volume, panels, before, expected = fx
     wrong = _load_mutant()
     rejected = []
@@ -132,6 +156,7 @@ def test_division_first_share_misses_an_exact_threshold(fx):
     ("S-D2", {"below_sessions": 5}),
     ("S-D3", {"below_sessions": 19}),
     ("S-D3", {"admit_burn_in": True}),
+    ("S-D2", {"admit_burn_in": True}),
     ("S-D3", {"strict": True}),
     ("S-D2", {"strict": True}),
 ])
@@ -163,30 +188,61 @@ def test_exactly_twenty_below_fires_and_nineteen_does_not():
 
 # ---------------------------------------------------------------- composite mutants (H-M)
 
-def test_composite_mutants_change_the_added_set(fx):
-    close, volume, panels, before, expected = fx
-    wrong = _load_mutant()
-    sp = ref.spec()
+def _extras(close, sp):
     extras = {}
     for member in ("S-D3", "S-D2"):
         c = sp["candidates"][member]
         fire = ref.ref_daily_fire(ref.ref_share(close, member, sp), float(c["threshold_pct"]))
-        fire.name = member
         extras[c["dimension"]] = fire
+    return extras
+
+
+def test_composite_mutants_change_the_added_set_or_the_or(fx):
+    close, volume, panels, before, expected = fx
+    wrong = _load_mutant()
+    sp = ref.spec()
+    extras = _extras(close, sp)
     after_ref = ref.ref_composite_with_members(panels, extras, cb=cb)
     assert _dates(ref.ref_added_events(before, after_ref, 2)) == expected["h_m"]["ge2"]["added"]
+    assert _dates(ref.ref_removed_events(before, after_ref, 2)) == expected["h_m"]["ge2"]["removed"]
     want_counts = expected["h_m"]["after_dim_true_counts"]
     assert {d: int(after_ref[d].sum()) for d in want_counts} == want_counts
     assert {d: int(before[d].sum()) for d in want_counts} == expected["h_m"]["before_dim_true_counts"]
+    assert int(after_ref["event"].sum()) == expected["h_m"]["after_event_count_all_sessions"]
     blind = []
-    for label, kw in (("replace", {"replace": True}), ("memory1", {"memory": 1})):
+    for label, kw in (("replace", {"replace": True}), ("memory1", {"memory": 1}), ("newly_on", {"newly_on_rule": True})):
         after = wrong.composite_wrong(panels, extras, cb, **kw)
         same_events = (_dates(ref.ref_added_events(before, after, 2)) == expected["h_m"]["ge2"]["added"]
                        and _dates(ref.ref_fresh_at(after, 2)) == expected["h_m"]["ge2"]["after"])
         same_dims = {d: int(after[d].sum()) for d in want_counts} == want_counts
-        if same_events and same_dims:
+        same_event_count = int(after["event"].sum()) == expected["h_m"]["after_event_count_all_sessions"]
+        if same_events and same_dims and same_event_count:
             blind.append(label)
     assert not blind, f"fixture is blind to these composite mutations: {blind}"
+
+
+def test_newly_on_rule_disagrees_on_the_planted_coincidence(fx):
+    close, volume, panels, before, expected = fx
+    wrong = _load_mutant()
+    sp = ref.spec()
+    extras = _extras(close, sp)
+    after = ref.ref_composite_with_members(panels, extras, cb=cb)
+    newly = wrong.composite_wrong(panels, extras, cb, newly_on_rule=True)
+    disagree = _dates(after.index[after["event"].astype(bool) != newly["event"].astype(bool)])
+    assert disagree == expected["h_m"]["event_rule_discriminating_sessions"]
+    d = pd.Timestamp(disagree[0])
+    assert not after.loc[d, "event"] and newly.loc[d, "event"]
+    assert after.loc[d, "n_dimensions"] <= after["n_dimensions"].shift(1).loc[d], "a memory expired as the member switched on"
+
+
+def test_fresh_at_without_the_data_ok_clause_admits_a_burn_in_event(fx):
+    close, volume, panels, before, expected = fx
+    wrong = _load_mutant()
+    assert _dates(ref.ref_fresh_at(before, 2)) == expected["h_m"]["ge2"]["before"]
+    got = _dates(wrong.fresh_at_without_data_ok(before, 2))
+    assert got != expected["h_m"]["ge2"]["before"]
+    for d in expected["h_m"]["ge2_events_inside_burn_in"]:
+        assert d in got and d not in expected["h_m"]["ge2"]["before"]
 
 
 def test_reference_composite_equals_the_engine_when_nothing_is_admitted(fx):
@@ -196,21 +252,23 @@ def test_reference_composite_equals_the_engine_when_nothing_is_admitted(fx):
     pd.testing.assert_frame_equal(same[before.columns], before)
 
 
-# ---------------------------------------------------------------- redundancy, clusters, lag, null
+# ---------------------------------------------------------------- redundancy, clusters, lag
 
 def _cofire_unit():
     cal = pd.bdate_range("2020-01-02", periods=200)
     fires = pd.DatetimeIndex([cal[50], cal[100], cal[150]])
-    cand = pd.DatetimeIndex([cal[50], cal[53], cal[55], cal[106], cal[180]])   # offsets 0, 3, 5, 6, 30
+    # offsets relative to a fire: -3 (leads), +3 (lags), -5 (leads), +6 (lags, outside), +30 (outside)
+    cand = pd.DatetimeIndex([cal[47], cal[53], cal[95], cal[106], cal[180]])
     return cal, fires, cand
 
 
-def test_cofire_window_mutants_are_rejected():
+def test_cofire_window_and_direction_mutants_are_rejected():
     cal, fires, cand = _cofire_unit()
     assert ref.ref_cofire_share(cand, fires, cal, 5) == 60.0
     wrong = _load_mutant()
     assert wrong.cofire_share_wrong(cand, fires, cal, 4) != 60.0
     assert wrong.cofire_share_wrong(cand, fires, cal, 6) != 60.0
+    assert wrong.cofire_share_wrong(cand, fires, cal, 5, backward_only=True) == 20.0, "the leading candidates are the ones lost"
 
 
 def test_cluster_gap_mutant_is_rejected(fx):
@@ -232,13 +290,71 @@ def test_unlagged_forward_join_is_rejected():
     row = fr.conditional_table(comp, spx, thresholds=(1,), events_only=True)
     row = row[(row["threshold"] == 1) & (row["horizon"] == "1w")].iloc[0]
     assert abs(row["median_ret"] - honest) < 1e-12
+    assert abs(ref.ref_forward_stats(pd.DatetimeIndex([cal[k]]), spx, h)["median"] - honest) < 1e-12
     wrong = _load_mutant()
     assert abs(wrong.forward_stats_lag0(pd.DatetimeIndex([cal[k]]), spx, h)["median"] - honest) > 1e-9
 
 
-def test_null_count_mutant_is_rejected():
-    cal = pd.bdate_range("2019-01-02", periods=600)
-    events = pd.DatetimeIndex([cal[300], cal[306], cal[314], cal[450]])
+# ---------------------------------------------------------------- the comparator on the unit path
+
+def test_reference_null_matches_the_pinned_draws_and_statistics(fx, unit):
+    close, volume, panels, before, expected = fx
+    sp, ui, uv, ue = unit
+    nu = expected["null_unit"]
+    gap = int(sp["clusters"]["gap_calendar_days"])
+    h = int(sp["horizons"]["sessions"]["3m"])
+    assert _dates(ue) == nu["events"]
+    assert len(ref.ref_complete_window_events(ue, ui, h)) == nu["n_complete"]
+    sets = ref.ref_null_sets(ue, uv, ui, h, 3, [19901228, 0], gap)
+    assert [_dates(s) for s in sets] == nu["first_three_draws_seed_0"]
+    null = ref.ref_null_draws(ue, uv, ui, h, 300, [19901228, 0], gap)
+    assert abs(null[:, 0].mean() - nu["null300_mean_win_rate"]) < 1e-12
+    assert abs(null[:, 1].mean() - nu["null300_mean_median"]) < 1e-12
+    treat = ref.ref_forward_stats(ue, ui, h)
+    assert ref.ref_mc_p(treat["win_rate"], null[:, 0]) == nu["p_win_treatment"]
+    assert ref.ref_mc_p(treat["median"], null[:, 1]) == nu["p_med_treatment"]
+
+
+def test_null_count_mutant_is_rejected(unit):
+    sp, ui, uv, ue = unit
     wrong = _load_mutant()
-    sets = wrong.null_sets_count_minus_one(events, cal[251:], 20, [19901228, 0])
-    assert all(len(s) != len(events) for s in sets), "the count mutant must not be count-matched"
+    sets = wrong.null_sets_count_minus_one(ue, uv, 20, [19901228, 0])
+    assert all(len(s) != len(ue) for s in sets), "the count mutant must not be count-matched"
+
+
+def test_power_mutants_are_rejected(fx, unit):
+    close, volume, panels, before, expected = fx
+    sp, ui, uv, ue = unit
+    nu = expected["null_unit"]
+    gap = int(sp["clusters"]["gap_calendar_days"])
+    h = int(sp["horizons"]["sessions"]["3m"])
+    alpha = float(sp["holm"]["alpha"])
+    null = ref.ref_null_draws(ue, uv, ui, h, 300, [19901228, 0], gap)
+    want10, want50 = nu["power_by_delta_pp"]["10.0"], nu["power_by_delta_pp"]["50.0"]
+    assert ref.ref_power(ue, uv, ui, h, 10.0, null, 100, [19901228, 1000], gap, alpha, 3) == want10
+    assert ref.ref_power(ue, uv, ui, h, 50.0, null, 100, [19901228, 1000], gap, alpha, 3) == want50 == 1.0
+    assert 0.05 < want10 < 0.95
+    wrong = _load_mutant()
+    at_alpha = wrong.power_wrong(ref, ue, uv, ui, h, 10.0, null, 100, [19901228, 1000], gap, alpha, 3, at_alpha=True)
+    assert at_alpha != want10, "a power scored at alpha instead of alpha/3 must differ at the mid-range delta"
+    units = wrong.power_wrong(ref, ue, uv, ui, h, 50.0, null, 100, [19901228, 1000], gap, alpha, 3, wrong_units=True)
+    assert units != want50, "a delta read in the wrong units must not saturate"
+
+
+def test_self_drill_centring_leg_rejects_a_shifted_null(fx, unit):
+    close, volume, panels, before, expected = fx
+    sp, ui, uv, ue = unit
+    nu = expected["null_unit"]
+    gap = int(sp["clusters"]["gap_calendar_days"])
+    h = int(sp["horizons"]["sessions"]["3m"])
+    alpha = float(sp["holm"]["alpha"])
+    wb, mb = float(sp["self_drill"]["win_band"]), float(sp["self_drill"]["median_band_pp"])
+    null = ref.ref_null_draws(ue, uv, ui, h, 300, [19901228, 0], gap)
+    got = ref.ref_self_drill(ue, uv, ui, h, null, 100, [19901228, 2000], gap, alpha, wb, mb)
+    assert got["centring_pass"] and got == nu["self_drill"]
+    shifted = null.copy()
+    shifted[:, 0] += 0.2                       # a null drawn from the bull years only would centre like this
+    assert not ref.ref_self_drill(ue, uv, ui, h, shifted, 100, [19901228, 2000], gap, alpha, wb, mb)["centring_pass"]
+    shifted = null.copy()
+    shifted[:, 1] += 0.03
+    assert not ref.ref_self_drill(ue, uv, ui, h, shifted, 100, [19901228, 2000], gap, alpha, wb, mb)["centring_pass"]

@@ -10,8 +10,10 @@ the engine reads the spec and never restates a value in code.
 
 **Context: Personal.** Public repository (`phuazz/breadth-thrust-signal`). The Norgate licence is personal-use-only:
 no vendor series value enters a tracked file; the study writes derived aggregates only. The NDR report that prompted
-the study is licensed research read through a CGSI seat and stays in `OneDrive\Main\NDR`; nothing of NDR's beyond the
-two published threshold levels (55.0 and 90.0) enters any file. Nothing in this document is an instruction to trade.
+the study is licensed research read through a CGSI seat and stays in `OneDrive\Main\NDR`; this registration, its spec
+and this public repository carry only the two published threshold levels (55.0 and 90.0), the report's name and the
+fact that it lists twelve thrust indicators (the private vault-docs kickoff carries the indicator-family mapping and two
+dated active counts). Nothing in this document is an instruction to trade.
 
 **Owner decision that opens this study (2026-09-18, kickoff):** NDR's twelve-thrust count is NOT adopted and
 crowd-sentiment's thrust trigger is untouched. What may be tested is two sub-conditions the meter does not carry,
@@ -53,7 +55,8 @@ claim of any kind.
 ## 3. Ledger check, 2026-10-01 (verdict ADJACENT)
 
 Run through `/ledger-check` at the freeze: `studies/hypotheses_index.md` read whole (168 of 168 rows, 100 per cent;
-149 of 275 records unreviewed), the matched records opened by id in `studies/hypotheses.yaml`, and
+149 of 275 records unreviewed, at the time of the check, 15:52 SGT; the index moved during the day as other sessions
+filed), the matched records opened by id in `studies/hypotheses.yaml`, and
 `STUDIES_LEDGER.md` grepped on deGraaf, 20-day high, 10-day average, above 10-day, breadth-thrust-signal, WS7, WS8,
 smallcap-thrust-lab, thrust-subconditions and bar-reanalysis. "deGraaf" and "20-day high" match nothing in the
 ledger; "10-day" matches only the gold-miner family and D1's own 10-day A/D member. **Both candidates are new to the
@@ -115,9 +118,10 @@ synthetic and carry no market data.
   live (the last `data_ok` session in the cache at run time, recorded). Halves, the WS7 split kept for comparability:
   early 1990-12-28 → 2017-12-29, late 2018-01-02 → live; both bounds are sessions (Friday and Tuesday,
   library-verified) and the engine asserts it on the panel calendar.
-- **Expected panel (Step 0, FAIL_STOP):** at least 1,290 ever-members; 490 to 510 members per day on every `data_ok`
-  session; the four-dimension event set reproduces the filed counts (98 fresh events to 2026-09-01; 46 at ≥3 in 41
-  clusters to 2026-07-31; last fresh event 2025-05-05) exactly.
+- **Expected panel (Step 0, FAIL_STOP):** at least 1,290 ever-members; a membership-mask count of 490 to 510 on every
+  `data_ok` session (the cutover row's 498 / 500 / 507; the mask count, not `valid_count`, so a halted name cannot
+  STOP the run); the four-dimension event set reproduces the filed counts (98 fresh events at ≥1 to 2026-09-01; 46 at
+  ≥3 in 41 clusters to 2026-07-31; last fresh event at any threshold 2025-05-05) exactly.
 - **Date handling.** Every date operation goes through pandas / `datetime` (Python months are 1-indexed and the code
   comments say so); session arithmetic runs on the panel's own calendar; one month-boundary and one year-boundary
   fixture sit in the battery.
@@ -131,41 +135,61 @@ Every guard names the test that enforces it; the tests were committed before thi
    20-day high on closes against intraday highs, 20 sessions against 19 or 20 calendar days, a 10-day average
    including or excluding today, at-or-above against strictly above, a share divided before it is scaled: each
    is a near-miss that fires on other days, and the published levels were calibrated to NDR's own definitions.
-   *Guards:* the close-based 20-session and 10-session definitions, the at-or-above rule and the share formula are
+   A forward-filled panel or a denominator that counts members without the required history belongs to the same
+   class: it changes the share on every session a name has a gap or has just entered. *Guards:* the close-based
+   20-session and 10-session definitions, the at-or-above rule, the share formula and the no-fill denominator are
    frozen in the spec (`candidates`); the planted panel pins the frozen rules against their nearest wrong
    neighbours — `tests/test_ws10_mutants.py` rejects the 19-session window, the strict new high, the 11-session
-   and exclude-today averages, the strict threshold and the division-first share, and `tests/test_ws10_contract.py`
-   pins a flat series at its closing high, a step-then-flat series above its average for exactly nine sessions, and
-   exact equality at the planted 55.0 and 90.0 (`test_flat_series_is_at_its_closing_high_under_the_inclusive_rule`,
+   and exclude-today averages, the strict threshold, the division-first share, the forward-filled panel and the
+   present-without-history denominator (the panel carries a late entrant and an interior gap for this), and
+   `tests/test_ws10_contract.py` pins a flat series at its closing high, a step-then-flat series above its average
+   for exactly nine sessions, the gap and the entrant leaving the denominator, and exact equality at the planted
+   55.0 and 90.0 (`test_flat_series_is_at_its_closing_high_under_the_inclusive_rule`,
    `test_step_then_flat_sits_above_its_ten_session_average_for_exactly_nine_sessions`,
-   `test_candidate_shares_match_the_fixture`); the intraday-high variant runs as a labelled sensitivity, never in a
-   family (spec `candidates.S-D3.labelled_sensitivity`).
+   `test_a_gap_and_a_late_entrant_leave_the_denominator`, `test_candidate_shares_match_the_fixture`); the
+   intraday-high variant runs as a labelled sensitivity, never in a family (spec `candidates.S-D3.labelled_sensitivity`).
 2. **Double counting.** Both candidates are fast breadth measures that co-fire with D1 and D4, and with their own
    dimension's members, on the same days, so a "confirming" fire may be the same information wearing a new hat, and
    a member admitted inside an existing memory window adds a fire without adding an event. *Guards:* the redundancy
-   and placement gate G2 with its pinned member fresh-fire rule (20 sessions False then True) and 5-session window
-   (`test_member_fresh_fires_match_the_fixture`, `test_redundancy_on_the_planted_panel`,
-   `test_redundancy_rule_known_cases`; the 4- and 6-session window mutants in the drill); OR-membership inside a
-   dimension rather than a new dimension, pinned by the identity with `compute_composite` when nothing is admitted
-   and by the OR-ed dimension counts, which a dimension REPLACED by its candidate cannot reproduce even though the
-   60-session memory hides the replacement from `n_dimensions`
-   (`test_composite_with_members_is_the_engine_when_nothing_is_admitted`, `test_added_events_match_the_fixture`; the
-   replace and memory mutants in the drill); and H-M gated on the ADDED events only, never on the before set.
+   and placement gate G2 with its pinned member fresh-fire rule (20 sessions False then True) and 5-session window in
+   either direction — a candidate that LEADS a member fire co-fires, which is the kickoff's own mechanism and the
+   direction a backward-looking window would miss (`test_member_fresh_fires_match_the_fixture`,
+   `test_redundancy_on_the_planted_panel`, `test_redundancy_rule_known_cases`; the 4- and 6-session window and the
+   backward-only mutants in the drill); the lead/lag split and the candidate's event count reported beside every G2
+   status; OR-membership inside a dimension rather than a new dimension, pinned by the identity with
+   `compute_composite` when nothing is admitted, by the OR-ed dimension counts, which a dimension REPLACED by its
+   candidate cannot reproduce even though the 60-session memory hides the replacement from `n_dimensions`, and by the
+   planted memory-expiry coincidence on which the frozen event rule and "any dimension newly on" disagree
+   (`test_composite_with_members_is_the_engine_when_nothing_is_admitted`, `test_added_and_removed_events_match_the_fixture`;
+   the replace, memory and newly-on mutants in the drill); H-M gated on the ADDED events only, never on the before
+   set, with the REMOVED events and the share of added events inside an existing memory window declared as signal-side
+   counts. D1 co-firing is reported and not guarded by G2: the gate reads the own dimension (REDUNDANT) and D4
+   (MISPLACED) as the kickoff wrote it, and prediction P1 scores on any of the three shares (§15).
 3. **The comparator is not like-for-like, or the wrong set sits on the wrong side of it.** A whole-window
    resample with no event count — the WS7 bar — clears both legs for random event sets 17 to 27 per cent of the
    time at 46 to 48 events (lessons memo §3.3; the WS7-bar re-analysis design); a count-matched null that ignores
    clustering, lets clusters overlap, or draws from sessions the observed events could not occupy (incomplete
    forward windows) moves the bar's dispersion in a direction that depends on the horizon, and any null returns a
    p-value, so nothing looks wrong. Separately, the seen four-dimension set could be scored as a treatment, or a
-   candidate set used as a comparator. *Guards:* the primary null is count-matched, cluster-structured, placed on
-   complete-window sessions, separated by more than the cluster gap and seeded per cell
-   (`test_null_sets_are_count_matched_and_cluster_structured`,
-   `test_null_draws_score_each_set_and_the_p_conventions`; the count mutant in the drill); the Step 0 self-drill
-   scores random sets through the same code and STOPs outside the nominal size (P0-6); the comparator's observables
-   are printed beside the treatment's before any percentile is read; the WS7 read is reported beside the primary
-   and is not admissible as a gate (spec `null.whole_window_resample_admissible_as_a_gate` false);
-   `CandidateRegistry.assert_comparator` refuses a candidate or added set as a comparator and `before_set` takes no
-   candidate argument (`test_the_seen_set_is_the_only_admissible_comparator`).
+   candidate set used as a comparator. A sampler left unpinned between a joint whole-set rejection and a sequential
+   placement would let the build decide whether the study runs at all (a joint draw of thirty clusters on a 27-year
+   half is accepted about once in two thousand attempts). *Guards:* the primary null is count-matched,
+   cluster-structured, placed SEQUENTIALLY on complete-window sessions of the return series with the lag included,
+   separated by more than the cluster gap, seeded per cell and pinned draw for draw to the reference sampler in
+   `tests/make_ws10_fixture.py` (`test_null_sets_reproduce_the_pinned_draws`,
+   `test_null_draws_statistics_and_p_conventions`,
+   `test_sampler_runs_at_thirty_clusters_and_lands_in_the_last_sessions_of_an_early_ending_window`,
+   `test_complete_window_rule_includes_the_lag`; the count mutant in the drill); the Step 0 self-drill's centring leg
+   checks the null's mean win rate and median against the unconditional complete-window figures over the half's valid
+   sessions, an independent reference, and STOPs outside its bands, while its size leg is a labelled smoke check that
+   cannot fail by construction (P0-6; `test_self_drill_reproduces_the_pinned_values_and_rejects_a_shifted_null`); the
+   power routine is pinned on the same deterministic path at four effect sizes, including a saturation case a correct
+   engine attains (`test_power_reproduces_the_pinned_values`; the α-instead-of-α/3 and wrong-units mutants in the
+   drill); the comparator's observables are printed beside the treatment's before any percentile is read; the WS7
+   read is reported beside the primary and is not admissible as a gate (spec
+   `null.whole_window_resample_admissible_as_a_gate` false); `CandidateRegistry.assert_comparator` refuses a candidate
+   or added set as a comparator, the runner routes every comparator it uses through it and records the checks in the
+   manifest, and `before_set` takes no candidate argument (`test_the_seen_set_is_the_only_admissible_comparator`).
 
 Plus the universe difference read as a threshold: the 90 level was published for a multi-cap universe and is
 applied to the S&P 500 — the level is a prior, the ±5-point sensitivities are reported, and no level is chosen from
@@ -178,7 +202,9 @@ unlagged mutant in the drill) and the burn-in and non-session refusals
 `test_no_event_inside_the_burn_in_even_when_the_share_crosses`, `test_non_session_date_is_refused`). Plus the
 fixture discipline learned on 2026-09-19 (duration-state-lab A1): the wrong engine is committed under
 `tests/mutants/ws10_wrong.py` and `tests/test_ws10_mutants.py` proves the planted expectations reject every
-mutation while the reference passes — verified before the tag.
+mutation while the reference passes — verified before the tag (29 drill tests), and the contract tests themselves were
+run against a scratch reference engine built on the fixture's reference functions (46 of 46 pass; the engine was not
+committed), so the contract is known to be satisfiable by a correct engine.
 
 ## 7. The two candidate definitions (frozen; spec `candidates`)
 
@@ -214,42 +240,62 @@ mutation while the reference passes — verified before the tag.
 ## 8. Comparator (frozen; spec `null`, `ws7_read`, `h_m`)
 
 - **Primary null, the only gate instrument: count-matched, cluster-structured random event sets.** For a cell
-  (hypothesis, half, horizon) the observed set is the treatment events with a complete forward window at that
-  horizon. Events are grouped into clusters by the WS7 rule (a gap strictly greater than 63 calendar days starts a
-  new cluster). A draw preserves the cluster count, each cluster's event count and each cluster's within-cluster
-  session offsets, and places each cluster at a start session drawn uniformly without replacement from the half's
-  `data_ok` sessions on which the whole cluster fits and every event's forward window is complete; clusters within a
-  draw are separated by more than 63 calendar days (rejection-sampled; 10,000 failed attempts for one draw is a
-  STOP). 2,000 draws per cell; `numpy.random.default_rng([19901228, cell_index])` with the cell order listed in the
-  spec; each draw scores the win rate and the median of the lagged forward returns. Monte Carlo
+  (hypothesis, half, horizon) the observed set is `complete_window_events(treatment)`: the treatment events whose
+  LAGGED forward window is complete on the return series (return-series position + 1 + h at most the last index; the
+  rule in spec `horizons.complete_window_rule`). Events are grouped into clusters by the WS7 rule (a gap strictly
+  greater than 63 calendar days starts a new cluster). A draw preserves the cluster count, each cluster's event count
+  and each cluster's within-cluster offsets in positions of the half's valid sessions (its `data_ok` sessions, in
+  order). **The sampler is pinned and sequential:** clusters are placed in chronological order of the observed set;
+  each cluster's start is drawn uniformly over the positions on which the whole cluster fits, every event of the
+  cluster is complete at the horizon on the return series, and every event is more than 63 calendar days from every
+  event already placed in the draw; the admissible positions are enumerated in ascending order and one
+  `rng.integers(len(admissible))` call chooses among them; a cluster with no admissible position restarts the whole
+  draw, and 10,000 restarts for one draw is a STOP. Because the complete-window rule lives on the return series, the
+  early half's late-2017 events are admissible on both the treatment and the null side although the half's valid
+  sessions end 2017-12-29. 2,000 draws per cell; `numpy.random.default_rng([19901228, cell_index])` with the cell
+  order listed in the spec; each draw scores the win rate and the median of the lagged forward returns. Monte Carlo
   p = (1 + draws at or beyond the observed) / (1 + 2,000) for each leg; the per-horizon p is max(p_win, p_med).
-  The 95th percentiles of the null win-rate and median distributions are reported beside the observed values. A
-  whole-window resample with no event count is not admissible as a gate.
+  The 95th percentiles of the null win-rate and median distributions are reported beside the observed values. The
+  reference implementation of the sampler (`tests/make_ws10_fixture.py`, `ref_null_sets`) is the semantics; the
+  contract pins the engine to it draw for draw on a deterministic path. A whole-window resample with no event count
+  is not admissible as a gate.
 - **The WS7 both-legs read, beside the primary for comparability, never a gate:** `forward_returns.unconditional_baseline`
   (moving-block bootstrap, block 21, 2,000 draws, seed 42, period-matched to the half) and `lift_table`'s two
   beyond-noise flags, so every cell can be read against the filed records' own bar.
-- **H-M's comparator is the seen four-dimension event set.** The "before" set is the four-dimension composite's
-  fresh ≥2 (gated) and ≥3 (reported) events; the "after" set is the composite with both candidates admitted; the
-  ADDED set is the after events whose signal date is not a before event date at the same threshold. The added set is
-  the treatment and is tested as its own event set against the primary null. The before set's own 3m statistics are
-  reported beside the change, labelled SEEN. **The engine refuses a candidate or added set offered as a comparator**
-  (`ComparatorMisuse`), and the contract test pins it: the seen four-dimension event sets enter only as the
-  comparator, the new members' event sets never do.
-- **Self-drill (Step 0, P0-6).** Per gate cell, 200 random sets drawn on a separate stream are scored through the
-  cell's own null; the share with per-horizon p at or below 0.05 must lie in [0.00, 0.10], else STOP. The comparator
-  is thereby checked against its own size before any treatment statistic exists.
+- **H-M: the seen four-dimension event set is the descriptive reference, the random null is the gate instrument.**
+  The "before" set is the four-dimension composite's fresh ≥2 (gated) and ≥3 (reported) events; the "after" set is the
+  composite with both candidates admitted; the ADDED set is the after events whose signal date is not a before event
+  date at the same threshold, and the REMOVED set is the mirror (a candidate that merely leads an existing member shifts
+  events rather than adds them). The added set is the treatment and is tested as its own event set against the primary
+  null; the before set is never scored as a treatment and never used as a null; its own 3m statistics are reported
+  beside the change, labelled SEEN, with the share of added events whose signal date lies inside a before-composite
+  ≥1 memory window (a promotion of an existing single-dimension state). **The engine refuses a candidate or added
+  set offered as a comparator** (`CandidateRegistry.assert_comparator`, `ComparatorMisuse`); the runner routes every
+  comparator it uses through the registry and records the checks in the manifest; `before_set` takes no candidate
+  argument. This is a labelling discipline enforced in the runner and pinned by the contract, not a property of the
+  statistic, and the registration says so.
+- **Self-drill (Step 0, P0-6).** Per gate cell, the centring leg is the STOP: the null's mean per-draw win rate must
+  lie within 0.05 of the unconditional share of positive complete-window lagged 3m returns over the half's valid
+  sessions, and the null's mean per-draw median within 1.5pp of the unconditional median of the same returns — a
+  reference computed directly from the return series, never through the null generator (coarse centring bands,
+  pre-results). The size leg — the share of 200 random sets drawn on the self-drill stream and scored through the
+  cell's own null with p at or below 0.05 — is reported as a smoke check and labelled as such: it cannot fail by
+  construction and is not a STOP.
 
 ## 9. Step 0 probes (comparator-side, FAIL_STOP, no outcome statistic; spec `step0_probes`)
 
-P0-1 panel identity and the four-dimension event-set reproduction (the filed counts, exactly); P0-2 both candidate
-shares defined on every `data_ok` session from the window start, first computable session reported; P0-3 signal-side
-counts (fresh events and clusters per candidate per half; the ADDED ≥2 and ≥3 counts per half) — counts, not looks;
-P0-4 `$SPX` continuous over the window and the half bounds resolving to sessions; P0-5 the spec sha256, the three
-module hashes, a clean tree on the frozen files and the `prereg-freeze` tag reachable; P0-6 the self-drill; P0-7
-power at +2.0pp (keyed) and +1.0pp (descriptive) per 3 months for every gate cell, from the null spread at random
-entries only, with THIN and demotion flags; P0-8 the study-only High cache (a shortfall records the intraday
-sensitivity NOT_RUN and does not STOP, the sensitivity being no gate). No candidate-conditional forward return, win
-rate, median, lift or percentile is computed at Step 0. Any STOP files `results/ws10_step0.json` and ends the run.
+P0-1 panel identity (the membership-mask count) and the four-dimension event-set reproduction (the filed counts,
+exactly); P0-2 both candidate shares defined on every `data_ok` session from the window start, first computable session
+reported; P0-3 signal-side counts (fresh events and clusters per candidate per half, the lead/lag split of co-fires,
+the ADDED and REMOVED ≥2 and ≥3 counts per half, the share of added ≥2 events inside a before-composite ≥1 memory
+window) — counts, not looks; P0-4 `$SPX` continuous over the window and the half bounds resolving to sessions; P0-5
+the spec sha256, the three module hashes, a clean tree on the frozen files and on `scripts/ws10_*.py`, and the
+`prereg-freeze` tag reachable; P0-6 the self-drill's centring leg (STOP) with its size leg reported; P0-7 power at
++2.0pp (keyed) and at +1.0pp and +5.0pp (descriptive) per 3 months for each of the six gate cells, the clause-level
+product per hypothesis, from the null spread at random entries only, with THIN and demotion flags; P0-8 the study-only
+High cache (a shortfall records the intraday sensitivity NOT_RUN and does not STOP, the sensitivity being no gate). No
+candidate-conditional forward return, win rate, median, lift or percentile is computed at Step 0. Any STOP files
+`results/ws10_step0.json` and ends the run.
 
 ## 10. Cells, Holm families, power and gates (frozen; spec `horizons`, `holm`, `power`, `gates`)
 
@@ -259,25 +305,45 @@ rate, median, lift or percentile is computed at Step 0. Any STOP files `results/
   0.05/2, 0.05); a horizon clears if and only if Holm rejects it. Every clause requires the 3m cell to clear in both
   halves; the conjunction's family-wise rate is at most 0.05², printed beside the result (0.0025 expected false
   INFORMATIVE candidates under the global null).
-- **Power and the 0.80 demotion rule (lessons memo §3.5; nq-orb-lab precedent).** For every gate cell, Step 0
-  draws 1,000 random sets with the cell's observed structure on the power stream, adds the declared δ to every 3m
-  forward return of the drawn set and scores p_3m against the cell's own 2,000-draw null; power = the share of draws
-  with p_3m ≤ 0.05/3 (the conservative Holm step, the other two horizons assumed null). Keyed δ = **+2.0pp per
-  3 months**; +1.0pp reported beside it. **THIN** below 0.50 (suffix `_THIN`). **Demotion** below 0.80: a cell that
-  does not clear reads **UNRESOLVED**, never FAIL. Cell status: PASS if it clears; FAIL if it does not clear and
-  power at +2.0pp is at least 0.80; UNRESOLVED otherwise. Clause status over the two halves: PASS if both PASS; FAIL
-  if any half FAIL; UNRESOLVED otherwise.
+- **Power and the 0.80 demotion rule (lessons memo §3.5; nq-orb-lab precedent).** The gate cells are the six 3m
+  cells (H-S1, H-S2 and H-M ≥2, each in both halves; spec `null.gate_cells`). For each, Step 0 draws 1,000 random
+  sets with the cell's observed structure through the pinned sampler on the power stream, adds the declared δ to
+  every lagged 3m forward return of the drawn set and scores max(p_win, p_med) against the cell's own 2,000-draw
+  null; power = the share of draws with that p ≤ 0.05/3 (the conservative Holm step, the other two horizons assumed
+  null). Keyed δ = **+2.0pp per 3 months** (the kickoff's); +1.0pp and +5.0pp reported beside it, and the
+  clause-level power (the product of the two halves) printed beside the per-cell figures. **THIN** below 0.50
+  (suffix `_THIN`). **Demotion** below 0.80: a cell that does not clear reads **UNRESOLVED**, never FAIL. Cell
+  status: PASS if it clears; FAIL if it does not clear and power at +2.0pp is at least 0.80; UNRESOLVED otherwise; a
+  cell with no treatment event has power 0 and reads UNRESOLVED. Clause status over the two halves: PASS if both
+  PASS; FAIL if any half FAIL; UNRESOLVED otherwise.
+- **What the keyed delta implies, stated at the freeze (red-team S1-2, 2026-10-01).** The two-leg clause requires
+  the win rate and the median to clear at α/3; a +2.0pp location shift moves the median by about one null standard
+  deviation but moves the win rate only by the density mass in (−2pp, 0], about 0.09 on a 3-month return
+  distribution with a standard deviation near 8.5 per cent, against a null standard deviation of the win rate of
+  about 0.11 at 15 clusters and 0.056 at 50. The reviewer's Monte Carlo on an S&P-like synthetic path puts the
+  clause's power at +2.0pp at 0.00 to 0.16 for 15 to 50 clusters, reaching 0.80 only near +6pp at 25 clusters or
+  +4pp at 50. **Consequence, pre-committed rather than widened:** no gate cell is expected to reach 0.80, so FAIL is
+  not expected to be reachable, every verdict is expected to carry `_THIN`, and the reachable verdict space is
+  STOP_STEP0, PROPOSE_ENGINE_CHANGE, PROPOSE_CONDITIONAL, ALREADY_CARRIED and UNRESOLVED. A non-clearing cell reads
+  "not detected at +2.0pp", never "absent". The study can therefore say "yes" (a candidate that clears a count-matched
+  null at α/3 in both halves) and "already carried" (G2 is signal-side and needs no power), and defers "no" to
+  accrual under a fresh registration that declares its own keyed delta or statistic. The owner's alternatives — a
+  prior-scaled keyed delta such as +5.0pp, or the median leg alone as the gate — are recorded in §20 and would be
+  pre-results amendments if ruled; neither is a look, because no own-data conditional statistic exists.
 - **G1 (standalone information), per candidate.** The candidate's fresh events clear both legs against the primary
   null at 3m under Holm, in both halves. Status PASS | FAIL | UNRESOLVED. INFORMATIVE means G1 PASS.
 - **G2 (redundancy and placement), per candidate.** The share of the candidate's fresh events within 5 sessions
   (either direction) of a fresh fire of any existing member of its own dimension, of D1, and of D4, on the pooled
   window and reported per half. MISPLACED if the D4 share is strictly greater than the own-dimension share; else
   REDUNDANT if the own-dimension share is strictly above 70 per cent; else DISTINCT; NO_EVENTS if the candidate never
-  fires. The D1 share is reported and never gated (the kickoff's rule as written). A REDUNDANT candidate is recorded
+  fires. The D1 share is reported and never gated (the kickoff's rule as written; P1 scores on any of the three
+  shares, a different predicate, acknowledged). The status carries the candidate's event count, the suffix THIN_G2
+  below ten fresh events in the pooled window (the mapping is unchanged; the reader sees the count) and the lead/lag
+  split of its co-fires (member fire before, on, or after the candidate's session). A REDUNDANT candidate is recorded
   as "already carried"; a MISPLACED one as such; neither is proposed for the engine.
 - **G3 (the meter).** The ADDED fresh ≥2 events of the composite with both candidates admitted clear both legs against
   the primary null at 3m under Holm, in both halves. Status PASS | FAIL | UNRESOLVED. The ≥3 added events are
-  reported at 3m, never gated.
+  reported at 3m, never gated; the REMOVED events at both thresholds and the memory-window share are reported beside.
 - **Sensitivities (descriptive, never gated, in no family):** S-D3 at 50.0 and 60.0, S-D2 at 85.0 and 95.0, and the
   S-D3 intraday-high variant, each at 3m, both legs, both halves, against the primary null, with its own cell index.
 - **Every figure** carries its baseline (the null's 95th percentiles and the WS7 band), its event and cluster counts
@@ -293,8 +359,12 @@ if G3 FAIL and at least one candidate is proposable. **ALREADY_CARRIED** if at l
 candidate is proposable. **NO_INFORMATION** if every candidate is G1 FAIL. **UNRESOLVED** otherwise (a deciding clause
 below its power floor did not pass). Suffix `_THIN` when the keyed power of any gate cell is below 0.50. The gate
 table travels with the verdict. **UNRESOLVED opens no engine change, reopens nothing, and is re-read once only, under
-a fresh registration by accrual, not before 2031-01.** Only the two PROPOSE verdicts propose anything, and the
-proposal is a separate owner-approved commit with its own MOBILE_CHECK pass; this registration changes nothing live.
+a fresh registration by accrual, not before 2031-01;** accrual alone cannot lift the two-leg clause's power at +2.0pp
+to 0.80, so that registration declares its own keyed delta or statistic before it runs. Under the keyed delta as
+frozen, FAIL and the two verdicts built on it (NO_INFORMATION, ADDS_FIRES_WITHOUT_INFORMATION) are not expected to be
+reachable (§10); they stay in the mapping so that the rule is complete over the status space, not because the
+registration expects them. Only the two PROPOSE verdicts propose anything, and the proposal is a separate
+owner-approved commit with its own MOBILE_CHECK pass; this registration changes nothing live.
 
 ## 12. Register mapping
 
@@ -319,8 +389,9 @@ No deployment, tilt or portfolio claim (WS8 rejected the tilt family). No statem
 than four dimensions or a count-based score. No threshold chosen from the outcome: the sensitivities and the intraday
 variant are descriptive. No "independent confirmation": both candidates are measured on the same panel and the same
 episodes as the existing members. No REDUNDANT or MISPLACED candidate described as adding information. No UNRESOLVED
-clause described as a negative result. No figure for either candidate without its baseline, its episode count and
-its half. No NDR figure, table or series beyond the two published threshold levels.
+clause described as a negative result, and no non-clearing cell described as "absent" rather than "not detected at
++2.0pp". No figure for either candidate without its baseline, its episode count and its half. No NDR figure, table or
+series beyond the two published threshold levels.
 
 ## 14. Stop conditions
 
@@ -332,7 +403,9 @@ spec does not answer is written to `ESCALATION_ws10.md` and the run stops; nothi
 ## 15. Registered predictions (verbatim from the kickoff) and how each is scored
 
 - **P1** — S-D2 is REDUNDANT with D1 or D4 above the 70 per cent line (0.6). Right if S-D2's own-dimension, D1 or D4
-  co-fire share is strictly above 70.0.
+  co-fire share is strictly above 70.0. This predicate reads any of the three shares; the G2 gate reads the own
+  dimension only (and D4 for MISPLACED), as the kickoff wrote both, so P1 can be right while G2 reads DISTINCT. The
+  difference is stated here and in the spec so the word "REDUNDANT" is not read as one predicate.
 - **P2** — S-D3 clears H-S1 in the 1990–2017 half but not 2018→ (0.4). Right if S-D3's early-half cell status is
   PASS and its late-half cell status is FAIL or UNRESOLVED.
 - **P3** — H-M fails because the added events number under 15 in the later half (0.5). Right if G3 is not PASS and
@@ -357,8 +430,10 @@ verdict read except where this document names a descriptive. `results/ws10_step0
 ## 17. Run protocol
 
 Build and run from `PROMPT_RUN_ws10.md` on Opus fast, verbatim: read order, the three silent-wrong ways restated,
-build in the stated order with one commit each, the battery green (every contract test running, none skipped)
-before any real data, Step 0 with FAIL_STOP, the full run ONCE, results committed, no interpretation. The Fable
+build in the stated order with one commit each (the engine, the runner, and the study-only High transport
+`scripts/ws10_high_cache.py`, which the frozen `norgate_provider` does not provide and which carries its own smoke
+check), the battery green (every contract test running, none skipped) before any real data, Step 0 with FAIL_STOP,
+the full run ONCE, results committed, no interpretation. The Fable
 verdict read, the prediction scoring and the filing follow in a separate session. Anything the spec does not answer
 is a STOP parked to `ESCALATION_ws10.md`, never a design-around. The run is booked for the bucket Thu 2026-10-01
 22:00 → Thu 2026-10-08 22:00 SGT (week of Mon 2026-10-05), suggested slot Mon 2026-10-05 or Tue 2026-10-06 evening
@@ -380,12 +455,44 @@ the existing records beyond those the kickoff and the smallcap-thrust-lab regist
 refresh or write the live meter's cache; it did not change the engine modules, the pipeline, the refresh guards, the
 page or `data/signals.json`; it did not register the WS7-bar re-analysis, the mid-cap replication of a clearing
 member, the deviation-from-trend or three-day price thrusts, or any twelve-thrust count; it did not adopt a second
-null; it did not pull the High field (the run session does, into a study-only cache). The freeze-time pins — design
-decisions taken before any outcome exists, listed in the spec's `freeze_time_pins` — are: the existing members'
-fresh-fire definition; per-horizon count matching on complete windows; the half-wise Holm family; the conservative
-power step; the D1 share reported not gated; the OR-member daily boolean; the cache read without refresh; H-M measured
-once with both admitted and PROPOSE_CONDITIONAL for the one-proposable case; the 2031-01 re-read date.
+null; it did not change the keyed delta, the both-legs rule or the G2 predicate after the red-team review (it stated
+their consequences and recorded the owner's alternatives in §20); it did not pull the High field (the run session
+does, into a study-only cache). The freeze-time pins — design decisions taken before any outcome exists, listed in
+the spec's `freeze_time_pins` — are: the existing members' fresh-fire definition; per-horizon count matching on
+complete windows with the complete-window rule on the return series; the sequential sampler; the self-drill's
+centring leg; the half-wise Holm family with the clause-level product printed; the conservative power step and the
+stated reachable verdict space; zero-event cells UNRESOLVED; the D1 share reported not gated and P1's predicate
+acknowledged; G2's count, THIN_G2 suffix and lead/lag split; the OR-member daily boolean and the event rule; REMOVED
+events and the memory-window share as declared counts; the cache read without refresh and the run-session High
+transport; H-M measured once with both admitted and PROPOSE_CONDITIONAL for the one-proposable case; the 2031-01
+re-read date with its own keyed delta.
 
 ## 20. Freeze review record
 
-Written at step 5 of the freeze session from the red-team review at the spec-freeze gate.
+The vault `red-team` agent reviewed the registration, the spec, the fixture, the wrong engine and the contract tests at
+`6383cc9` (spec sha256 `fb5b61ac…`) and returned "not ready to tag": two blocking findings, five must-fix items and
+thirteen worth-noting pins. The full report and the freeze session's verification table are filed in
+`reviews/red-team_spec-freeze_2026-10-01.md`. Every S1 and S2 was fixed before the freeze commit; the S3 items were
+fixed or dispositioned; nothing in the fixes reads a result, because none exists.
+
+| Finding | Disposition before the tag |
+|---|---|
+| S1-1 the power contract test unattainable by a correct engine (a saturated win-rate leg on a positive-drift path) | FIXED: the comparator's reference implementation (sampler, draws, Monte Carlo p, power, self-drill) lives in `tests/make_ws10_fixture.py` on a deterministic zero-drift path with 24 events in 12 clusters; power pinned at +0 / +3 / +10 / +50pp as 0.0 / 0.0 / 0.37 / 1.0; the α-step and wrong-units mutants rejected; the contract run against a scratch reference engine, 46 of 46 |
+| S1-2 the keyed +2.0pp has power near size, so FAIL is unreachable and the study cannot say "no" | ADOPTED option (i): the keyed delta stays the kickoff's; §10 and §11 state the reachable verdict space and the reading "not detected at +2.0pp"; +1.0pp and +5.0pp and the clause-level product printed; options (ii) a prior-scaled delta and (iii) the median leg recorded below for the owner |
+| S2-1 the sampler unpinned between joint and sequential rejection | FIXED: sequential placement pinned in the spec and the reference, draw for draw in the contract; 30 clusters for 2,000 draws tested |
+| S2-2 the null's placement range narrower than the treatment's; the lag fencepost | FIXED: `complete_window_events` on the return series with the lag, on both sides; an early-ending window tested |
+| S2-3 the self-drill tautological | FIXED: centring leg against an independent unconditional reference (bands 0.05 / 1.5pp) is the STOP; size leg a labelled smoke check; in the API and pinned |
+| S2-4 the fixture blind to the co-fire direction and the membership mask | FIXED: 800-name panel with a late entrant, an interior gap, a burn-in composite event and a memory-expiry coincidence; leading candidates in the known cases; five more near-miss engines rejected |
+| S2-5 "REDUNDANT" two predicates; §6 overstating the D1 guard | FIXED by statement: the kickoff's gate kept, P1's any-of-three predicate scored as written and distinguished in §6, §10, §15 and the spec; the memory-window share and the REMOVED events declared; option (iv) gating on max(own, D1, D4) recorded below |
+| S3 Holm thresholds restated; gate cells undefined; High transport absent; mask count; guard key threshold; zero-event cells; comparator wording; removed events; G2 thinness; stale §3 figures; licence sentence; dirty engine module; booking label | all FIXED as listed in the review file §3 |
+
+**Owner alternatives recorded, not adopted** (each a pre-results amendment on the duration-state-lab mechanism if the
+owner so rules; none is a look): (ii) key the demotion to a prior-scaled delta such as +5.0pp per 3 months, with
++2.0pp and +1.0pp descriptive — FAIL becomes reachable, and "no" would mean "not +5pp"; (iii) gate on the median leg
+with the win rate descriptive — departs from the WS7 both-legs convention the hypotheses state; (iv) gate REDUNDANT
+on max(own, D1, D4) above 70 — a candidate that fires on D1's days inside D2 or D3 could no longer be proposed.
+
+Catches logged by the reviewer in `~/.claude/red-team-catches.md` (seven lines): SATURATION TEST BLOCKED BY A
+DISCRETE LEG; DEMOTION KEYED BELOW THE CLAUSE'S REACH; NULL SAMPLER UNPINNED BETWEEN JOINT AND SEQUENTIAL
+REJECTION; COMPARATOR PLACEMENT RANGE NARROWER THAN THE TREATMENT'S; ONE WORD, TWO PREDICATES; and two instances
+(GUARD TAUTOLOGICAL BY CONSTRUCTION; FIXTURE BLIND TO THE DIRECTION AND THE MASK).

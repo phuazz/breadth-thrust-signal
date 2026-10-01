@@ -2,11 +2,15 @@
 
 Every function here implements a near-miss of a frozen rule in ``spec/ws10_prereg_spec.json``:
 a 19-session window, a strict new-high test, an 11-session or exclude-today average, a share
-divided before it is scaled, a 5- or 19-session below-run, events admitted inside the burn-in, a
-strict threshold, a dimension replaced instead of OR-ed, a one-session memory, a 4- or 6-session
-co-fire window, a 62-day cluster gap, an unlagged forward join and a null that drops one event.
-``tests/test_ws10_mutants.py`` asserts that the fixture's expectations reject each of them while the
-reference in ``tests/make_ws10_fixture.py`` passes. Never import this module from the engine.
+divided before it is scaled, a forward-filled panel, a denominator that counts members without the
+required history, a 5- or 19-session below-run, events admitted inside the burn-in, a strict
+threshold, a dimension replaced instead of OR-ed, a one-session memory, an "any dimension newly on"
+event rule, fresh events read without the data_ok clause, a co-fire window that only looks backward,
+a 4- or 6-session co-fire window, a 62-day cluster gap, an unlagged forward join, a null that drops
+one event, a power routine scored at alpha instead of alpha/3 and one that reads the delta in the
+wrong units. ``tests/test_ws10_mutants.py`` asserts that the fixture's expectations reject each of
+them while the reference in ``tests/make_ws10_fixture.py`` passes. Never import this module from the
+engine.
 
 Python months are 1-indexed. Date arithmetic goes through pandas only.
 """
@@ -49,14 +53,35 @@ def share_sd2_exclude_today(close: pd.DataFrame) -> pd.Series:
     return _share_from(close > stat, close.notna() & stat.notna())
 
 
-def share_division_first(close: pd.DataFrame, member: str) -> pd.Series:
+def _stat_and_hit(close: pd.DataFrame, member: str):
     if member == "S-D3":
         stat = close.rolling(20, min_periods=20).max()
-        hit = close >= stat
-    else:
-        stat = close.rolling(10, min_periods=10).mean()
-        hit = close > stat
+        return stat, close >= stat
+    stat = close.rolling(10, min_periods=10).mean()
+    return stat, close > stat
+
+
+def share_division_first(close: pd.DataFrame, member: str) -> pd.Series:
+    stat, hit = _stat_and_hit(close, member)
     return _share_from(hit, close.notna() & stat.notna(), division_first=True)
+
+
+def share_ffill(close: pd.DataFrame, member: str) -> pd.Series:
+    """The panel forward-filled before the rolling statistic: a gap is papered over."""
+    filled = close.ffill()
+    stat, hit = _stat_and_hit(filled, member)
+    return _share_from(hit, filled.notna() & stat.notna())
+
+
+def share_denominator_present(close: pd.DataFrame, member: str) -> pd.Series:
+    """Every member with a close today counts in the denominator, with or without the required history."""
+    stat, hit = _stat_and_hit(close, member)
+    valid = close.notna() & stat.notna()
+    num = (hit & valid).sum(axis=1).astype(float)
+    den = close.notna().sum(axis=1).astype(float)
+    share = 100.0 * num / den.replace(0.0, np.nan)
+    share[den < 400] = np.nan
+    return share
 
 
 def fresh_events_wrong(share: pd.Series, threshold: float, data_ok: pd.Series, below_sessions: int = 20,
@@ -80,8 +105,10 @@ def fresh_events_wrong(share: pd.Series, threshold: float, data_ok: pd.Series, b
     return pd.DatetimeIndex(out)
 
 
-def composite_wrong(panels, extra: dict, cb, replace: bool = False, memory: int | None = None) -> pd.DataFrame:
-    """compute_composite with the candidate REPLACING its dimension (replace=True) or with a wrong memory."""
+def composite_wrong(panels, extra: dict, cb, replace: bool = False, memory: int | None = None,
+                    newly_on_rule: bool = False) -> pd.DataFrame:
+    """compute_composite with the candidate REPLACING its dimension (replace=True), a wrong memory, or the
+    event rule 'any dimension newly on' instead of 'n_dimensions increases'."""
     config = cb.CompositeConfig()
     mem = memory or config.memory_days
     dims = pd.concat([cb.d1_advance_decline(panels), cb.d2_pct_above_ma(panels),
@@ -95,20 +122,41 @@ def composite_wrong(panels, extra: dict, cb, replace: bool = False, memory: int 
         df[f"{d}_on"] = dims[d].rolling(mem, min_periods=1).max().astype(bool)
         on_cols.append(f"{d}_on")
     df["n_dimensions"] = df[on_cols].sum(axis=1).astype(int)
-    df["event"] = (df["n_dimensions"] > df["n_dimensions"].shift(1).fillna(0)).astype(bool)
+    if newly_on_rule:
+        newly = pd.concat([df[c] & ~df[c].shift(1).fillna(False).astype(bool) for c in on_cols], axis=1).any(axis=1)
+        df["event"] = newly.astype(bool)
+    else:
+        df["event"] = (df["n_dimensions"] > df["n_dimensions"].shift(1).fillna(0)).astype(bool)
     computable = (panels.ma_valid_count >= cb.MIN_VALID_CONSTITUENTS) & (panels.hl_valid_count >= cb.MIN_VALID_CONSTITUENTS)
     df["burn_in"] = ~computable
     df["data_ok"] = (panels.valid_count >= cb.MIN_VALID_CONSTITUENTS) & computable
     return df
 
 
-def cofire_share_wrong(cand: pd.DatetimeIndex, fires: pd.DatetimeIndex, sessions: pd.DatetimeIndex, window: int) -> float:
-    """The reference's co-fire share with a caller-chosen window (4 or 6 in the drill)."""
+def fresh_at_without_data_ok(comp: pd.DataFrame, thr: int) -> pd.DatetimeIndex:
+    sel = comp["event"].astype(bool) & (comp["n_dimensions"] >= thr)
+    return pd.DatetimeIndex(comp.index[sel])
+
+
+def cofire_share_wrong(cand: pd.DatetimeIndex, fires: pd.DatetimeIndex, sessions: pd.DatetimeIndex, window: int,
+                       backward_only: bool = False) -> float:
+    """The reference's co-fire share with a caller-chosen window (4 or 6 in the drill), or counting only member
+    fires at or BEFORE the candidate event (a candidate that leads the member never co-fires)."""
     if len(cand) == 0:
         return float("nan")
     pos = {d: i for i, d in enumerate(sessions)}
     fire_pos = np.array(sorted(pos[d] for d in fires), dtype=int)
-    hits = sum(1 for d in cand if len(fire_pos) and np.any(np.abs(fire_pos - pos[d]) <= window))
+    hits = 0
+    for d in cand:
+        i = pos[d]
+        if not len(fire_pos):
+            continue
+        diff = i - fire_pos                      # positive when the member fired before the candidate
+        if backward_only:
+            hit = np.any((diff >= 0) & (diff <= window))
+        else:
+            hit = np.any(np.abs(diff) <= window)
+        hits += int(hit)
     return 100.0 * hits / len(cand)
 
 
@@ -140,3 +188,18 @@ def null_sets_count_minus_one(events: pd.DatetimeIndex, valid_sessions: pd.Datet
         pos = np.sort(rng.choice(len(valid_sessions), size=n, replace=False))
         out.append(pd.DatetimeIndex(valid_sessions[pos]))
     return out
+
+
+def power_wrong(ref, events, valid_sessions, index_series, h, delta_pp, null_values, draws, seed_key, gap_days,
+                alpha, family_size, at_alpha: bool = False, wrong_units: bool = False) -> float:
+    """The reference's power with the bar at alpha instead of alpha / family_size, or with the delta read as a
+    fraction instead of percentage points."""
+    sets = ref.ref_null_sets(events, valid_sessions, index_series, h, draws, seed_key, gap_days)
+    bar = alpha if at_alpha else alpha / family_size
+    shift = delta_pp / 10_000.0 if wrong_units else delta_pp / 100.0
+    hits = 0
+    for s in sets:
+        r = ref.ref_lagged_returns(s, index_series, h) + shift
+        p = max(ref.ref_mc_p(float((r > 0).mean()), null_values[:, 0]), ref.ref_mc_p(float(np.median(r)), null_values[:, 1]))
+        hits += int(p <= bar)
+    return hits / draws

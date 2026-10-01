@@ -5,7 +5,7 @@
   "design_record": "C:/dev/KICKOFF_thrust-subconditions.md",
   "prereg_document": "PREREG_thrust-subconditions.md",
   "post_freeze_changes_allowed": false,
-  "licence": "Norgate personal-use-only: vendor series values never enter a tracked file, derived aggregates only; NDR: nothing beyond the two published threshold levels (55.0 and 90.0) enters any file, the report stays in OneDrive",
+  "licence": "Norgate personal-use-only: vendor series values never enter a tracked file, derived aggregates only. NDR: this registration, this spec and the public repository carry only the two published threshold levels (55.0 and 90.0), the report's name and the fact that it lists twelve thrust indicators; the private vault-docs kickoff carries the indicator-family mapping and two dated active counts; the report stays in OneDrive",
   "engine": {
     "repo": "C:/dev/breadth-thrust-signal",
     "scripts_dir": "C:/dev/breadth-thrust-signal/scripts",
@@ -15,7 +15,7 @@
       "norgate_provider.py": "7439f0aa3627f02b5a05413ffa3c59d9e2348d7bfc1c1d5c91e28e6a54274600"
     },
     "modify_engine_modules": false,
-    "study_modules": ["scripts/ws10_subconditions.py", "scripts/ws10_run.py"],
+    "study_modules": ["scripts/ws10_subconditions.py", "scripts/ws10_run.py", "scripts/ws10_high_cache.py"],
     "constants": {
       "ZWEIG_LOW": 0.40, "ZWEIG_HIGH": 0.615, "ZWEIG_WINDOW": 10,
       "AD_RATIO_WINDOW": 10, "AD_RATIO_THRESHOLD": 1.90,
@@ -52,23 +52,24 @@
     "refresh_cache": false,
     "cache_note": "the cache as refreshed by the live meter's last Saturday run; the study never refreshes it; the NDU database time and the cache vintage are recorded in the manifest",
     "membership": "norgate_provider.membership_mask on the full-symbol universe, effective-date convention, no shift (WS7 build step 0)",
-    "panel_masking": "close.where(mask), volume.where(mask): a member counts only with the required history INSIDE its membership, the engine's own convention for D2 and D3",
+    "panel_masking": "close.where(mask), volume.where(mask): a member counts only with the required history INSIDE its membership, the engine's own convention for D2 and D3; no forward fill and no padding anywhere",
     "window_start": "1990-12-28",
     "window_start_rule": "the first data_ok session of the four-dimension composite (after the 252-session burn-in); asserted equal to window_start else STOP",
     "window_end": "live: the last data_ok session in the cache at run time, recorded in the manifest",
     "halves": {
       "early": ["1990-12-28", "2017-12-29"],
       "late": ["2018-01-02", "live"],
-      "note": "the WS7 split; both bounds are sessions on the panel calendar and the engine asserts it (2017-12-29 Friday, 2018-01-02 Tuesday, library-verified)"
+      "note": "the WS7 split; both bounds are sessions on the panel calendar and the engine asserts it (2017-12-29 Friday, 2018-01-02 Tuesday, library-verified); a half's valid sessions are its data_ok sessions, while forward windows run on the whole return series, so an early-half event in late 2017 is admissible on both the treatment and the null side"
     },
     "expected_panel": {
       "ever_members_min": 1290,
-      "members_per_day_range": [490, 510],
+      "members_per_day_mask_range": [490, 510],
+      "members_per_day_note": "the membership-mask count on every data_ok session (data_quality.members_per_day), not valid_count; the cutover row reads 498 / 500 / 507",
       "event_set_guard": {
         "fresh_events_ge1_on_or_before_2026-09-01": 98,
         "fresh_events_ge3_on_or_before_2026-07-31": 46,
         "clusters_ge3_on_or_before_2026-07-31": 41,
-        "last_fresh_event_on_or_before_2026-09-01": "2025-05-05",
+        "last_fresh_event_ge1_on_or_before_2026-09-01": "2025-05-05",
         "source": "ledger rows 2026-09-02 breadth-thrust-signal (cutover) and 2026-09-02 smallcap-thrust-lab (verdict); the same guard smallcap-thrust-lab PREREG-1 passed on 2026-09-02",
         "on_miss": "STOP"
       }
@@ -78,7 +79,7 @@
       "cache_root": "C:/dev/.norgate-store/breadth-thrust-signal-ws10",
       "basis": "TOTALRETURN",
       "field": "High",
-      "note": "pulled by the run session into a study-only cache; the live meter's cache is never written by this study"
+      "transport": "the frozen norgate_provider pulls Close and Volume only, so the run session writes scripts/ws10_high_cache.py (price_timeseries on the TOTALRETURN basis, PaddingType.NONE, no start_date, the High column kept, full-symbol keys, parquet footer provenance as the live cache) with its own smoke check; the live meter's cache is never written by this study; descriptive use only, bounded by P0-8"
     }
   },
   "candidates": {
@@ -116,16 +117,16 @@
     },
     "shared": {
       "share_units": "per cent, 0 to 100",
-      "share_formula": "100.0 * numerator_count / denominator_count, the multiplication first, so that a share sitting exactly on a published level (220 of 400 is 55.0; 360 of 400 is 90.0) is exact in floating point and the at-or-above rule reads it",
-      "denominator": "members present that day with the required history (close not NaN and the rolling statistic not NaN)",
+      "share_formula": "100.0 * numerator_count / denominator_count, the multiplication first, so that a share sitting exactly on a published level (440 of 800 is 55.0; 720 of 800 is 90.0) is exact in floating point and the at-or-above rule reads it",
+      "denominator": "members present that day with the required history (close not NaN and the rolling statistic not NaN); a close inside the window missing leaves the name out of both numerator and denominator for that session",
       "share_nan_below_members": 400,
       "share_computable_from": "the first session with required_history_sessions of panel history; never emitted earlier",
       "fresh_event_rule": "a member fires on the first session its share is at or above its threshold after at least below_sessions consecutive DEFINED sessions strictly below the threshold",
       "below_sessions": 20,
       "events_admitted": "on data_ok sessions at or after window_start only; the below_sessions lookback may reach into the burn-in but no event may sit inside it",
-      "burn_in_refusal": "any request for candidate events on a session before the first data_ok session, or on a panel with no data_ok session, raises BurnInRefusal",
+      "burn_in_refusal": "any request for candidate events on a session before the first data_ok session, or on a panel with no data_ok session, or on a panel shorter than HL_LOOKBACK plus the member's window_sessions, raises BurnInRefusal",
       "non_session_refusal": "any date argument (an event date, a window bound, a half bound) that is not a session on the panel calendar raises NonSessionDate",
-      "or_member_daily_boolean": "share >= threshold (NaN -> False), the same kind of daily boolean as the existing members; compute_composite's memory and event logic apply unchanged",
+      "or_member_daily_boolean": "share >= threshold (NaN -> False), the same kind of daily boolean as the existing members; compute_composite's memory and event logic apply unchanged: an event is a session on which n_dimensions increases, never a session on which some dimension is newly on while another expires",
       "memory_sessions": 60,
       "signal_lag_sessions": 1
     }
@@ -136,19 +137,24 @@
   },
   "redundancy": {
     "window_sessions": 5,
-    "window_rule": "a candidate fresh event co-fires with a member fresh fire when the two are at most 5 sessions apart in either direction",
+    "window_rule": "a candidate fresh event co-fires with a member fresh fire when the two are at most 5 sessions apart in EITHER direction: a candidate that leads a member fire by one to five sessions co-fires exactly as one that lags it",
     "shares": ["own_dimension", "d1", "d4"],
     "redundant_if_own_dimension_share_pct_above": 70.0,
     "misplaced_if": "the D4 co-fire share is strictly greater than the own-dimension co-fire share",
-    "d1_share": "reported, never gated",
-    "statuses": ["DISTINCT", "REDUNDANT", "MISPLACED"],
+    "d1_share": "reported, never gated (the kickoff's rule as written; P1 scores on any of the three shares, a different predicate from G2's, acknowledged at the freeze)",
+    "statuses": ["DISTINCT", "REDUNDANT", "MISPLACED", "NO_EVENTS"],
     "status_rule": "MISPLACED if the misplaced rule holds, else REDUNDANT if the own-dimension share is strictly above 70.0, else DISTINCT; a candidate with zero fresh events is NO_EVENTS",
+    "count_beside_status": true,
+    "thin_suffix_below_events": 10,
+    "thin_suffix": "THIN_G2 in the gate table when the candidate has fewer than 10 fresh events in the pooled window; the mapping is unchanged, the reader sees the count",
+    "lead_lag_split_reported": "every co-fire is classed as the member fire BEFORE, on the SAME session as, or AFTER the candidate event, and the three counts are reported beside each share",
     "window": "the pooled window; shares also reported per half"
   },
   "horizons": {
     "sessions": {"1m": 21, "3m": 63, "6m": 126},
     "primary": "3m",
     "forward_return": "px[t+h]/px[t] - 1 with t the session after the signal close, through forward_returns.conditional_table (signal lagged one session)",
+    "complete_window_rule": "an event at return-series position i is complete at horizon h when i + 1 + h is at most the last index of the return series; complete_window_events applies this rule to every treatment set, and the same rule defines the sessions on which a null event may be placed",
     "return_series": "$SPX",
     "excluded": {"1w": "never computed as evidence", "12m": "never computed as evidence"}
   },
@@ -156,13 +162,14 @@
   "null": {
     "kind": "count-matched, cluster-structured random event sets",
     "treatment": "the candidate's fresh events (H-S1, H-S2) or the ADDED fresh >=2 events (H-M); never a seen set",
-    "per_horizon_observed_set": "the treatment events whose forward window at the horizon is complete on the return series",
-    "structure_preserved": ["cluster count", "each cluster's event count", "each cluster's within-cluster session offsets"],
-    "placement": "cluster start sessions drawn uniformly without replacement from the half's data_ok sessions on which the whole cluster fits and every event's forward window at the horizon is complete",
-    "separation": "clusters within a draw separated from each other by more than 63 calendar days (rejection-sampled; 10000 failed attempts for one draw is a STOP)",
+    "per_horizon_observed_set": "complete_window_events(treatment, return series, h)",
+    "structure_preserved": ["cluster count", "each cluster's event count", "each cluster's within-cluster offsets in positions of the half's valid sessions"],
+    "placement": "SEQUENTIAL, pinned: clusters are placed in chronological order of the observed set; each cluster's start is drawn uniformly over the positions of the half's valid sessions (its data_ok sessions, in order) on which the whole cluster fits, every event of the cluster is complete at the horizon on the return series, and every event of the cluster is more than gap_calendar_days calendar days from every event already placed in the draw; the admissible positions are enumerated in ascending order and one rng.integers(len(admissible)) call chooses among them",
+    "restart": "a cluster with no admissible position restarts the whole draw; 10000 restarts for one draw is a STOP",
+    "max_restarts": 10000,
     "draws": 2000,
     "seed": 19901228,
-    "rng": "numpy.random.default_rng([19901228, cell_index]) per cell, cell_index from cell_order",
+    "rng": "numpy.random.default_rng([19901228, cell_index]) per cell, cell_index from cell_order; one integers call per cluster placement, restarts included",
     "power_rng": "numpy.random.default_rng([19901228, 1000 + cell_index])",
     "self_drill_rng": "numpy.random.default_rng([19901228, 2000 + cell_index])",
     "cell_order": [
@@ -174,11 +181,21 @@
       "S-D2.sens85.early.3m", "S-D2.sens85.late.3m", "S-D2.sens95.early.3m", "S-D2.sens95.late.3m",
       "S-D3.intraday.early.3m", "S-D3.intraday.late.3m"
     ],
+    "gate_cells": ["H-S1.early.3m", "H-S1.late.3m", "H-S2.early.3m", "H-S2.late.3m", "H-M.ge2.early.3m", "H-M.ge2.late.3m"],
     "statistics_per_draw": ["win_rate", "median"],
     "mc_p": "(1 + count of null draws at or beyond the observed) / (1 + draws)",
     "per_horizon_p": "max(p_win, p_med)",
     "bars_reported": "the 95th percentile of the null win-rate and median distributions, beside the observed values",
     "whole_window_resample_admissible_as_a_gate": false
+  },
+  "self_drill": {
+    "probe": "P0-6",
+    "centring_leg": "the STOP: the null's mean per-draw win rate within win_band of the unconditional share of positive complete-window lagged h-returns over the half's valid sessions, and the null's mean per-draw median within median_band_pp of the unconditional median of the same returns; the reference is computed directly from the return series, never through the null generator",
+    "win_band": 0.05,
+    "median_band_pp": 1.5,
+    "band_note": "coarse centring bands, pre-results: the mean of per-draw medians of small sets sits a fraction of a point from the population median on a skewed distribution, which is why the median band is wider than a size check would be",
+    "size_leg": "reported as a smoke check and labelled as such: the share of drill_draws random sets, drawn on the self-drill stream and scored through the cell's own null, with max(p_win, p_med) at or below alpha; it cannot fail by construction and is not a STOP",
+    "drill_draws": 200
   },
   "ws7_read": {
     "purpose": "comparability with the filed records only; never a gate",
@@ -190,7 +207,7 @@
   "holm": {
     "alpha": 0.05,
     "family": "the three horizons {1m, 3m, 6m} of one hypothesis in one half",
-    "thresholds": [0.016667, 0.025, 0.05],
+    "step_threshold": "alpha / (m - k + 1) for the k-th smallest of m p-values, computed by the engine from alpha; never restated as a number",
     "clears": "a horizon clears if and only if Holm rejects it",
     "clause": "the 3m cell clears in both halves",
     "expected_false_informative_under_global_null_per_candidate": 0.0025,
@@ -198,31 +215,36 @@
   },
   "power": {
     "delta_pp_3m_keyed": 2.0,
-    "delta_pp_3m_descriptive": 1.0,
+    "deltas_pp_3m_descriptive": [1.0, 5.0],
     "draws": 1000,
-    "method": "random event sets with the observed cell's structure (the null generator on the power stream); delta added to every 3m forward return of the drawn set; p_3m scored against the cell's 2000-draw null; power = share of draws with p_3m <= alpha/3 (the conservative Holm step: the other two horizons assumed null)",
+    "method": "random event sets with the observed cell's structure (the pinned sampler on the power stream); delta added to every lagged 3m forward return of the drawn set; max(p_win, p_med) scored against the cell's 2000-draw null; power = share of draws with that p at or below alpha / 3 (the conservative Holm step: the other two horizons assumed null)",
     "thin_below": 0.50,
     "demotion_below": 0.80,
-    "cell_status_rule": "PASS if the cell clears; FAIL if it does not clear and power at the keyed delta >= 0.80; UNRESOLVED if it does not clear and power at the keyed delta < 0.80",
+    "cell_status_rule": "PASS if the cell clears; FAIL if it does not clear and power at the keyed delta >= 0.80; UNRESOLVED if it does not clear and power at the keyed delta < 0.80; a cell with no treatment event has power 0 and reads UNRESOLVED",
     "clause_status_rule": "PASS if both halves PASS; FAIL if any half FAIL; UNRESOLVED otherwise",
-    "computed_at": "Step 0, before any conditional statistic, from the null spread at random entries"
+    "clause_level_power": "the product of the two halves' powers at each delta, printed beside the per-cell figures",
+    "gate_cells": "the six 3m cells listed in null.gate_cells; the _THIN suffix and P0-7 read these",
+    "computed_at": "Step 0, before any conditional statistic, from the null spread at random entries",
+    "reachable_verdicts_under_the_keyed_delta": "the red-team Monte Carlo at the freeze gate (2026-10-01) puts the two-leg clause's power at +2.0pp per 3 months at 0.00 to 0.16 for 15 to 50 clusters, so no gate cell is expected to reach 0.80 and FAIL is not expected to be reachable: the reachable verdict space is STOP_STEP0, PROPOSE_ENGINE_CHANGE, PROPOSE_CONDITIONAL, ALREADY_CARRIED and UNRESOLVED, each carrying _THIN; a non-clearing cell reads 'not detected at +2.0pp', never 'absent'; the keyed delta is the kickoff's and is kept; the owner's alternatives (a prior-scaled keyed delta such as +5.0pp, or the median leg alone as the gate) are recorded in PREREG section 20 and would be pre-results amendments if ruled"
   },
   "gates": {
     "G1": "per candidate: the candidate's fresh events clear both legs against the count-matched null at 3m under Holm across {1m, 3m, 6m}, in both halves; status PASS | FAIL | UNRESOLVED from the per-half cell statuses",
-    "G2": "per candidate: DISTINCT | REDUNDANT | MISPLACED | NO_EVENTS from the redundancy block",
+    "G2": "per candidate: DISTINCT | REDUNDANT | MISPLACED | NO_EVENTS from the redundancy block, reported with the candidate's event count and the THIN_G2 suffix below 10 events",
     "G3": "the ADDED fresh >=2 events of the composite with both candidates admitted clear both legs against the count-matched null at 3m under Holm, in both halves; status PASS | FAIL | UNRESOLVED",
     "informative": "G1 PASS",
     "proposable": "G1 PASS and G2 DISTINCT"
   },
   "h_m": {
     "admitted": "both candidates, as registered: S-D3 OR-ed into d3, S-D2 OR-ed into d2",
-    "before": "the four-dimension composite's fresh events (event and n_dimensions >= thr); SEEN; the comparator side only",
+    "before": "the four-dimension composite's fresh events (event and n_dimensions >= thr, data_ok); SEEN; the descriptive reference for the change",
     "after": "the composite with both candidates admitted",
     "added": "fresh >=thr events of the after composite whose signal date is not a fresh >=thr event date of the before composite",
+    "removed": "fresh >=thr events of the before composite whose signal date is not a fresh >=thr event date of the after composite (a candidate that merely leads an existing member shifts events rather than adds them)",
     "gated_threshold": 2,
     "reported_threshold": 3,
-    "reported_beside": ["before and after event counts per half", "the before set's 3m win rate and median per half (SEEN, labelled)", "the change in the event set", "the change in 3m lift"],
-    "candidate_sets_as_comparator": "never; the engine refuses a candidate or added set offered as a comparator"
+    "reported_beside": ["before and after event counts per half", "the before set's 3m win rate and median per half (SEEN, labelled)", "the ADDED and REMOVED event dates per threshold per half", "the change in 3m lift", "the share of ADDED >=2 events whose signal date lies inside a before-composite >=1 memory window (a promotion of an existing single-dimension state, signal-side count, P0-3)"],
+    "gate_scored_against": "the count-matched cluster-structured null on the ADDED set; the before set is never scored as a treatment and never used as a null",
+    "candidate_sets_as_comparator": "never; the runner routes every comparator it uses through CandidateRegistry.assert_comparator and records the checks in the manifest; a labelling discipline enforced in the runner and pinned by the contract test, not a property of the statistic"
   },
   "verdict": {
     "enum": ["STOP_STEP0", "PROPOSE_ENGINE_CHANGE", "PROPOSE_CONDITIONAL", "ADDS_FIRES_WITHOUT_INFORMATION", "ALREADY_CARRIED", "NO_INFORMATION", "UNRESOLVED"],
@@ -235,26 +257,26 @@
       "NO_INFORMATION if every candidate is G1 FAIL",
       "UNRESOLVED otherwise (a deciding clause below its power floor did not pass)"
     ],
-    "suffix_thin": "_THIN appended when the power at the keyed delta of any gate cell is below 0.50",
-    "unresolved_consequence": "opens no engine change, reopens nothing; re-read once only, under a fresh registration by accrual, not before 2031-01",
+    "suffix_thin": "_THIN appended when the power at the keyed delta of any of the six gate cells is below 0.50",
+    "unresolved_consequence": "opens no engine change, reopens nothing; re-read once only, under a fresh registration by accrual, not before 2031-01; accrual alone cannot lift the two-leg clause's power at +2.0pp to 0.80, so that registration declares its own keyed delta or statistic before it runs",
     "only_proposes": "PROPOSE_ENGINE_CHANGE and PROPOSE_CONDITIONAL; the engine change is a separate owner-approved commit with its own MOBILE_CHECK pass; this registration changes nothing live",
     "gate_table_travels_with_the_verdict": true
   },
   "predictions": {
-    "P1": {"claim": "S-D2 is REDUNDANT with D1 or D4 above the 70 per cent line", "p": 0.6, "scored_right_if": "the S-D2 own-dimension co-fire share is strictly above 70.0, or its D1 or D4 co-fire share is strictly above 70.0"},
+    "P1": {"claim": "S-D2 is REDUNDANT with D1 or D4 above the 70 per cent line", "p": 0.6, "scored_right_if": "the S-D2 own-dimension co-fire share is strictly above 70.0, or its D1 or D4 co-fire share is strictly above 70.0; this predicate reads any of the three shares, where the G2 gate reads the own dimension only"},
     "P2": {"claim": "S-D3 clears H-S1 in the 1990-2017 half but not 2018 onward", "p": 0.4, "scored_right_if": "S-D3 early-half cell status PASS and late-half cell status FAIL or UNRESOLVED"},
     "P3": {"claim": "H-M fails because the added events number under 15 in the later half", "p": 0.5, "scored_right_if": "G3 is not PASS and the ADDED fresh >=2 events in the late half number fewer than 15; the clause status at such a count is expected to read UNRESOLVED under the demotion rule, which scores as a non-pass"}
   },
   "step0_probes": {
     "all_fail_stop": true,
-    "no_outcome_statistic": "no candidate-conditional forward return, win rate, median, lift or percentile is computed at Step 0; power uses random entries only",
-    "P0-1_panel": "provider norgate-pit; ever-members >= 1290; members per day inside [490, 510] on every data_ok session; first data_ok session equals window_start; the four-dimension event set reproduces the event_set_guard counts exactly",
+    "no_outcome_statistic": "no candidate-conditional forward return, win rate, median, lift or percentile is computed at Step 0; power and the self-drill use random entries only",
+    "P0-1_panel": "provider norgate-pit; ever-members >= 1290; the membership-mask count inside [490, 510] on every data_ok session; first data_ok session equals window_start; the four-dimension event set reproduces the event_set_guard counts exactly",
     "P0-2_computability": "both candidate shares are defined (>= 400 members with the required history) on every data_ok session from window_start; the first computable session is reported",
-    "P0-3_signal_side_counts": "per candidate per half: fresh events and clusters; the ADDED >=2 and >=3 counts per half; signal-side only (doctrine D1: counts are not looks)",
+    "P0-3_signal_side_counts": "per candidate per half: fresh events and clusters, and the lead/lag split of co-fires; the ADDED and REMOVED >=2 and >=3 counts per half; the share of ADDED >=2 events inside a before-composite >=1 memory window; signal-side only (doctrine D1: counts are not looks)",
     "P0-4_benchmark": "$SPX on the NONE basis continuous over the window (no gap above 5 sessions on the panel calendar); the half bounds resolve to sessions",
-    "P0-5_hashes_and_tree": "spec sha256 equals FROZEN_SPEC_SHA256; the three engine-module hashes equal the pinned values; PREREG, spec and tests clean against HEAD; the tag prereg-freeze reachable",
-    "P0-6_self_drill": "per gate cell: 200 random sets scored through the cell's own null; the share with per-horizon p <= 0.05 must lie in [0.00, 0.10]",
-    "P0-7_power": "per gate cell: power at +2.0pp (keyed) and +1.0pp (descriptive) per 3 months; THIN and demotion flags recorded",
+    "P0-5_hashes_and_tree": "spec sha256 equals FROZEN_SPEC_SHA256; the three engine-module hashes equal the pinned values; PREREG, spec, tests and scripts/ws10_*.py clean against HEAD; the tag prereg-freeze reachable",
+    "P0-6_self_drill": "per gate cell: the centring leg (self_drill) within its bands, else STOP; the size leg reported as a smoke check",
+    "P0-7_power": "per gate cell: power at +2.0pp (keyed) and at +1.0pp and +5.0pp (descriptive) per 3 months, the clause-level product per hypothesis; THIN and demotion flags recorded",
     "P0-8_high_cache": "the study-only High cache pulled for the intraday sensitivity; its symbol count equals the panel's, else the sensitivity is recorded NOT_RUN with the reason (the sensitivity is not a gate, so this probe alone does not STOP)"
   },
   "outputs": {
@@ -273,14 +295,14 @@
     "any threshold level chosen from the outcome; the sensitivities and the intraday variant are descriptive",
     "independent confirmation: both candidates are measured on the same panel and the same episodes as the existing members",
     "a REDUNDANT or MISPLACED candidate described as adding information",
-    "an UNRESOLVED clause described as a negative result",
+    "an UNRESOLVED clause described as a negative result, or a non-clearing cell described as 'absent' rather than 'not detected at +2.0pp'",
     "any figure for either candidate presented without its baseline, its episode count and its half",
     "any NDR figure, table or series beyond the two published threshold levels"
   ],
   "stop_conditions": [
     "any Step 0 probe fails (STOP_STEP0; the block is filed and the run ends)",
     "the spec hash, a module hash or the tree-cleanliness check fails",
-    "a null draw cannot be placed in 10000 attempts",
+    "a null draw cannot be placed in 10000 restarts",
     "a candidate share is undefined on any data_ok session inside the window",
     "the four-dimension event set does not reproduce the guard counts",
     "anything the spec does not answer: write it to ESCALATION_ws10.md and stop; never design around it"
@@ -289,21 +311,34 @@
     "bucket_start_sgt": "2026-10-01T22:00:00+08:00",
     "bucket_end_sgt": "2026-10-08T22:00:00+08:00",
     "week_of": "2026-10-05",
+    "bucket_note": "the bucket opens Thursday 2026-10-01 at 22:00 SGT and closes Thursday 2026-10-08 at 22:00 SGT; the week of Monday 2026-10-05 is the working week inside it",
     "suggested_slot": "Mon 2026-10-05 or Tue 2026-10-06 evening SGT, after the Sat 2026-10-03 WS7 review; flagged for owner confirmation",
     "executor": "Opus, fast mode, mechanical execution of PROMPT_RUN_ws10.md",
     "verdict_reader": "Fable, a separate session"
   },
   "freeze_time_pins": [
     "the existing members' fresh-fire definition (20 sessions False then True) mirrors the candidates' rule; the kickoff did not define it",
-    "count matching is per horizon on events with a complete forward window; the null places clusters only where every window is complete",
-    "the Holm family is the three horizons of one hypothesis in one half; the clause conjoins the two halves",
-    "power is scored at the conservative Holm step alpha/3 with the other two horizons assumed null",
-    "the D1 co-fire share is reported and never gated; MISPLACED reads D4 only, as the kickoff wrote it",
-    "the OR-member boolean for H-M is the daily share-at-or-above-threshold boolean, the same kind as the existing members' daily booleans",
-    "the study reads the live meter's cache without refreshing it; the intraday-high sensitivity uses a study-only High cache",
+    "count matching is per horizon on complete-window events; the complete-window rule lives on the return series with the lag included and applies identically to the treatment and to the null's admissible positions",
+    "the null sampler is sequential in chronological cluster order with whole-draw restarts and one integers call per placement; a joint whole-set rejection is not the pinned sampler",
+    "the self-drill's STOP is the centring leg against an independent unconditional reference; its size leg is a labelled smoke check",
+    "the Holm family is the three horizons of one hypothesis in one half; the clause conjoins the two halves; the clause-level power is the product and is printed",
+    "power is scored at the conservative Holm step alpha/3 with the other two horizons assumed null; the keyed delta is the kickoff's +2.0pp and the reachable verdict space under it is stated rather than widened",
+    "a cell with no treatment event reads UNRESOLVED with power 0",
+    "the D1 co-fire share is reported and never gated; MISPLACED reads D4 only, as the kickoff wrote it; P1's any-of-three predicate is scored as written and acknowledged as different from G2's",
+    "G2 carries the candidate's event count, the THIN_G2 suffix below 10 events and the lead/lag split beside its status; the mapping is unchanged",
+    "the OR-member boolean for H-M is the daily share-at-or-above-threshold boolean, the same kind as the existing members' daily booleans; an event is a session on which n_dimensions increases",
+    "REMOVED events and the share of ADDED events inside an existing memory window are declared signal-side counts",
+    "the study reads the live meter's cache without refreshing it; the intraday-high sensitivity uses a study-only High cache whose transport the run session writes",
     "H-M is measured once with both candidates admitted; PROPOSE_CONDITIONAL covers the case where only one is proposable",
-    "the late half's end is the run-time window end; the UNRESOLVED re-read date 2031-01 is pre-committed"
+    "the late half's end is the run-time window end; the UNRESOLVED re-read date 2031-01 is pre-committed and a re-read registration declares its own keyed delta or statistic"
   ],
+  "freeze_review": {
+    "gate": "spec freeze",
+    "date": "2026-10-01",
+    "record": "reviews/red-team_spec-freeze_2026-10-01.md and PREREG_thrust-subconditions.md section 20",
+    "blocking_fixed_before_the_tag": ["S1-1 power contract attainable by a correct engine (reference null, power and self-drill pinned on a deterministic path)", "S1-2 reachable verdict space under the keyed delta stated; descriptive deltas and clause-level power added", "S2-1 sequential sampler pinned", "S2-2 complete-window rule on the return series on both sides", "S2-3 self-drill centring leg with an independent reference", "S2-4 fixture re-planted (leading co-fires, late entrant, interior gap, burn-in composite event, memory-expiry coincidence) and the near-miss engines added to the drill", "S2-5 P1 and G2 predicates distinguished and the memory-window share declared"],
+    "owner_alternatives_recorded_not_adopted": ["key the demotion to a prior-scaled delta such as +5.0pp per 3 months", "gate on the median leg with the win rate descriptive", "gate REDUNDANT on max(own, D1, D4) above 70"]
+  },
   "excluded": [
     "any threshold search", "the deviation-from-trend and three-day price thrusts", "the McClellan Summation", "NDR's twelve-thrust count",
     "any change to the live meter, the pipeline default, the refresh guards or template.html", "the tilt work (WS8)", "crowd-sentiment's thrust trigger",

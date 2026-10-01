@@ -124,8 +124,61 @@ synthetic and carry no market data.
 
 ## 6. Three ways this study could be silently wrong, and the guard for each
 
-Written at step 4 of the freeze session, after the battery exists, so that each guard names the test that
-enforces it. See the commit that fills this section.
+At least one of the three is a way the COMPARATOR could be wrong (lessons memo §7.2 P4); here it is the third.
+Every guard names the test that enforces it; the tests were committed before this section was written.
+
+1. **A definition mismatch on the member condition produces a different event set under the same name.** A
+   20-day high on closes against intraday highs, 20 sessions against 19 or 20 calendar days, a 10-day average
+   including or excluding today, at-or-above against strictly above, a share divided before it is scaled: each
+   is a near-miss that fires on other days, and the published levels were calibrated to NDR's own definitions.
+   *Guards:* the close-based 20-session and 10-session definitions, the at-or-above rule and the share formula are
+   frozen in the spec (`candidates`); the planted panel pins the frozen rules against their nearest wrong
+   neighbours — `tests/test_ws10_mutants.py` rejects the 19-session window, the strict new high, the 11-session
+   and exclude-today averages, the strict threshold and the division-first share, and `tests/test_ws10_contract.py`
+   pins a flat series at its closing high, a step-then-flat series above its average for exactly nine sessions, and
+   exact equality at the planted 55.0 and 90.0 (`test_flat_series_is_at_its_closing_high_under_the_inclusive_rule`,
+   `test_step_then_flat_sits_above_its_ten_session_average_for_exactly_nine_sessions`,
+   `test_candidate_shares_match_the_fixture`); the intraday-high variant runs as a labelled sensitivity, never in a
+   family (spec `candidates.S-D3.labelled_sensitivity`).
+2. **Double counting.** Both candidates are fast breadth measures that co-fire with D1 and D4, and with their own
+   dimension's members, on the same days, so a "confirming" fire may be the same information wearing a new hat, and
+   a member admitted inside an existing memory window adds a fire without adding an event. *Guards:* the redundancy
+   and placement gate G2 with its pinned member fresh-fire rule (20 sessions False then True) and 5-session window
+   (`test_member_fresh_fires_match_the_fixture`, `test_redundancy_on_the_planted_panel`,
+   `test_redundancy_rule_known_cases`; the 4- and 6-session window mutants in the drill); OR-membership inside a
+   dimension rather than a new dimension, pinned by the identity with `compute_composite` when nothing is admitted
+   and by the OR-ed dimension counts, which a dimension REPLACED by its candidate cannot reproduce even though the
+   60-session memory hides the replacement from `n_dimensions`
+   (`test_composite_with_members_is_the_engine_when_nothing_is_admitted`, `test_added_events_match_the_fixture`; the
+   replace and memory mutants in the drill); and H-M gated on the ADDED events only, never on the before set.
+3. **The comparator is not like-for-like, or the wrong set sits on the wrong side of it.** A whole-window
+   resample with no event count — the WS7 bar — clears both legs for random event sets 17 to 27 per cent of the
+   time at 46 to 48 events (lessons memo §3.3; the WS7-bar re-analysis design); a count-matched null that ignores
+   clustering, lets clusters overlap, or draws from sessions the observed events could not occupy (incomplete
+   forward windows) moves the bar's dispersion in a direction that depends on the horizon, and any null returns a
+   p-value, so nothing looks wrong. Separately, the seen four-dimension set could be scored as a treatment, or a
+   candidate set used as a comparator. *Guards:* the primary null is count-matched, cluster-structured, placed on
+   complete-window sessions, separated by more than the cluster gap and seeded per cell
+   (`test_null_sets_are_count_matched_and_cluster_structured`,
+   `test_null_draws_score_each_set_and_the_p_conventions`; the count mutant in the drill); the Step 0 self-drill
+   scores random sets through the same code and STOPs outside the nominal size (P0-6); the comparator's observables
+   are printed beside the treatment's before any percentile is read; the WS7 read is reported beside the primary
+   and is not admissible as a gate (spec `null.whole_window_resample_admissible_as_a_gate` false);
+   `CandidateRegistry.assert_comparator` refuses a candidate or added set as a comparator and `before_set` takes no
+   candidate argument (`test_the_seen_set_is_the_only_admissible_comparator`).
+
+Plus the universe difference read as a threshold: the 90 level was published for a multi-cap universe and is
+applied to the S&P 500 — the level is a prior, the ±5-point sensitivities are reported, and no level is chosen from
+the outcome (§10, §13). Plus the power trap: a clause that cannot detect the registered effect reading as a
+negative — power at +2.0pp per 3 months keyed to the 0.80 demotion and the 0.50 THIN suffix
+(`test_power_is_one_at_a_huge_effect_and_the_size_at_zero`, `test_cell_and_clause_status_rules`). Plus look-ahead:
+the one-session lag through `forward_returns.conditional_table` (`test_forward_stats_are_lagged_one_session`; the
+unlagged mutant in the drill) and the burn-in and non-session refusals
+(`test_refuses_any_computation_before_the_burn_in_plus_its_own_window`,
+`test_no_event_inside_the_burn_in_even_when_the_share_crosses`, `test_non_session_date_is_refused`). Plus the
+fixture discipline learned on 2026-09-19 (duration-state-lab A1): the wrong engine is committed under
+`tests/mutants/ws10_wrong.py` and `tests/test_ws10_mutants.py` proves the planted expectations reject every
+mutation while the reference passes — verified before the tag.
 
 ## 7. The two candidate definitions (frozen; spec `candidates`)
 

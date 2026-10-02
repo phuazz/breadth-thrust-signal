@@ -1,20 +1,20 @@
 {
   "contract_version": "1",
   "emitted_by": "breadth-thrust-signal",
-  "emitted_at": "2026-09-25T23:02:42+00:00",
+  "emitted_at": "2026-10-02T23:02:45+00:00",
   "signals": {
     "conviction_meter": {
-      "as_of": "2026-09-25",
-      "state": "1",
-      "value": 1.0,
-      "zone": "dimensions on: d3",
+      "as_of": "2026-10-02",
+      "state": "0",
+      "value": 0.0,
+      "zone": "dimensions on: none",
       "role": "view-only",
       "horizon": "6m",
       "evidence_grade": "informational",
       "licence": "public",
       "action_hint": "none",
       "source_file": "data/signals.json",
-      "computed_at": "2026-09-25T23:02:35.952876+00:00",
+      "computed_at": "2026-10-02T23:02:30.922373+00:00",
       "cadence": "manual"
     }
   }

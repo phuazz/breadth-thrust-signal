@@ -1,0 +1,59 @@
+{
+ "registration": "PREREG thrust-subconditions (WS10) - breadth-thrust-signal",
+ "mode": "step0",
+ "written_at_utc": "2026-10-25T10:47:11.377645+00:00",
+ "git_revision": "928de209bc6fd546384abecbd9ba36ac19debbe9",
+ "tag": "prereg-freeze",
+ "tag_commit": "5e31a216301655fc71a7066345ac06f055ab1653",
+ "spec_sha256": "b805afaf4f02988bf9d1e7b83d0f7ed4d41696a327b610371d8b78e936b13f33",
+ "engine_modules_sha256": {
+  "compute_breadth.py": "97e0137f2ee2d4dceababe5e8638f6f61a33225d69acd0733d5ef0c751efdbbf",
+  "forward_returns.py": "6068c385b9d66dbe2ee2428bd6a4075245e39d091a188f1230f4eab0d7ee635e",
+  "norgate_provider.py": "7439f0aa3627f02b5a05413ffa3c59d9e2348d7bfc1c1d5c91e28e6a54274600"
+ },
+ "study_modules_sha256": {
+  "ws10_high_cache.py": "f2e52ca758201c5a184997df009fd640ddf0fc4fd0af9abd0a7d2db007521148",
+  "ws10_run.py": "74abff70456e59dbd349b261d233e5763401938e8af192b536ddc0c09168f43f",
+  "ws10_subconditions.py": "3ad960103bfc07f2123ab93c99a5d42bde0a943201ccae9df182277e4dcbf7ac"
+ },
+ "ndu_database_time": "2026-10-25 17:59:54+08:00",
+ "cache_vintage": {
+  "staleness": {
+   "live_ndu": "2026-10-25 17:59:54+08:00",
+   "cache_ndu": [
+    "2026-10-17 07:25:20+08:00"
+   ],
+   "drift_days": 8
+  },
+  "benchmark_cache_footer": {
+   "basis": "NONE",
+   "pulled_at_utc": "2026-10-16T23:01:12.902946+00:00",
+   "ndu_last_database_update_time": "2026-10-17 06:30:34+08:00",
+   "last_date": "2026-10-16"
+  }
+ },
+ "cache_refreshed_by_this_run": false,
+ "window_end_realised": "2026-10-16",
+ "high_cache": {
+  "cache_root": "C:\\dev\\.norgate-store\\breadth-thrust-signal-ws10",
+  "basis": "TOTALRETURN",
+  "field": "High",
+  "symbols": 1304,
+  "missing": 0,
+  "ndu_times": [
+   "2026-10-25 17:59:54+08:00"
+  ],
+  "smoke": {
+   "symbol": "A",
+   "sessions": 6773,
+   "high_below_close_sessions": 0,
+   "pass": true,
+   "footer_basis": "TOTALRETURN",
+   "footer_field": "High"
+  },
+  "smoke_pass": true,
+  "panel_symbols": 1304
+ },
+ "comparator_checks": [],
+ "comparator_note": "every comparator the runner uses is routed through CandidateRegistry.assert_comparator; the primary null is random sets from the pinned sampler; the WS7 read is the unconditional block bootstrap; neither is a candidate or added set"
+}

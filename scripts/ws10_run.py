@@ -7,7 +7,7 @@ refreshed or written; ``data/signals.json``, ``docs/`` and ``template.html`` are
     python scripts/ws10_run.py --step0     Step 0 only: the probes, power and the self-drill (random entries
                                            only); no candidate-conditional statistic; writes ws10_step0.json
     python scripts/ws10_run.py --full      Step 0 again, then, if nothing stopped, every cell of
-                                           null.cell_order; refuses to run when results/ws10_results.json exists
+                                           null.cell_order; refuses after any previous full-run start or output
 
 Outputs: results/ws10_results.json (declared cells), results/ws10_full.json, results/ws10_step0.json,
 results/ws10_manifest.json and an appended line in data_local/ws10_runs_log.jsonl. The results files carry
@@ -22,6 +22,7 @@ import argparse
 import hashlib
 import json
 import logging
+import os
 import re
 import subprocess
 import sys
@@ -49,6 +50,12 @@ DATA_LOCAL = ROOT / "data_local"
 FROZEN_PATHS = ("PREREG_thrust-subconditions.md", "spec/", "tests/")
 STUDY_GLOB = re.compile(r"^scripts/ws10_[^/]*\.py$")
 TEST_FILES_WITH_PIN = ("tests/test_ws10_contract.py", "tests/test_ws10_mutants.py")
+WS7_CONVENTION = (
+    "Legacy WS7 convention retained by owner ruling: the bootstrap price series is truncated to the half, "
+    "so baseline return windows cannot cross its end; treatment events are assigned by signal date and "
+    "their complete lagged returns may cross the half boundary. Descriptive comparison only, never a gate; "
+    "the primary null matches treatment window eligibility."
+)
 
 
 class Stop(RuntimeError):
@@ -311,7 +318,7 @@ def signal_side(ctx: Context, window_end, hv, sets, fires) -> dict:
         red = ws.redundancy(ev, fires, own, cal)
         block["redundancy_pooled"] = {**{k: _f(red[k]) for k in ("own", "d1", "d4")}, "n_events": red["n_events"],
                                       "status": red["status"], "thin_g2": red["thin"]}
-        block["lead_lag_pooled"] = {k: ws.cofire_split(ev, fires[dk], cal)
+        block["lead_lag_pooled"] = {k: cofire_report(ev, fires[dk], cal)
                                     for k, dk in (("own", own), ("d1", "d1"), ("d4", "d4"))}
         ties[member] = {k: ws.cofire_ties(ev, fires[dk], cal) for k, dk in (("own", own), ("d1", "d1"), ("d4", "d4"))}
         for half, b in hv.items():
@@ -320,7 +327,7 @@ def signal_side(ctx: Context, window_end, hv, sets, fires) -> dict:
             block[half] = {"fresh_events": int(len(e)), "clusters": ws.cluster_count(e, gap),
                            "dates": [_d(x) for x in e],
                            "redundancy": {**{k: _f(r[k]) for k in ("own", "d1", "d4")}, "n_events": r["n_events"]},
-                           "lead_lag": {k: ws.cofire_split(e, fires[dk], cal)
+                           "lead_lag": {k: cofire_report(e, fires[dk], cal)
                                         for k, dk in (("own", own), ("d1", "d1"), ("d4", "d4"))}}
         block["first_computable_session"] = _d(sets[member]["share"].first_valid_index())
         block["daily_fire_sessions_data_ok"] = int((ws.daily_fire(sets[member]["share"],
@@ -349,6 +356,12 @@ def signal_side(ctx: Context, window_end, hv, sets, fires) -> dict:
         out["h_m"][thr_key] = hb
     out["cofire_ties"] = ties
     return out
+
+
+def cofire_report(events, fires, calendar) -> dict:
+    """The three frozen split keys plus the separately authorised tied count."""
+    return {**ws.cofire_split(events, fires, calendar),
+            "tied": ws.cofire_ties(events, fires, calendar)}
 
 
 def comparator_step0(ctx: Context, hv, sets, nulls: dict) -> dict:
@@ -420,6 +433,8 @@ def step0(ctx: Context, nulls: dict) -> tuple[dict, dict | None]:
             raise Stop(f"provider {ctx.provider} is not {ws.get(sp, 'data.provider')}")
         if ctx.ever_members < int(exp["ever_members_min"]):
             raise Stop(f"ever-members {ctx.ever_members} below {exp['ever_members_min']}")
+        if len(ok_idx) == 0:
+            raise Stop("no data_ok session on this panel")
         first_ok = ok_idx[0]
         window_start = pd.Timestamp(ws.get(sp, "data.window_start"))
         if first_ok != window_start:
@@ -488,11 +503,6 @@ def step0(ctx: Context, nulls: dict) -> tuple[dict, dict | None]:
         p03 = signal_side(ctx, window_end, hv, sets, fires)
         p03["member_fresh_fires_pooled"] = {k: int(len(v)) for k, v in fires.items()}
         block["probes"]["P0-3"] = {**p03, "pass": True}
-        tie_total = sum(v for m in p03["cofire_ties"].values() for v in m.values())
-        if tie_total:
-            block["probes"]["P0-3"]["pass"] = False
-            raise Stop(f"{tie_total} co-firing candidate events have two member fires equally near on opposite "
-                       "sides; the spec does not say how the lead/lag split classes them")
         # P0-6 and P0-7
         comp0 = comparator_step0(ctx, hv, sets, nulls)
         block["probes"]["P0-7"] = {"cells": {c: {k: v[k] for k in ("cell_index", "treatment_events_complete",
@@ -513,9 +523,10 @@ def step0(ctx: Context, nulls: dict) -> tuple[dict, dict | None]:
         note["intraday_sensitivity"] = "RUN" if ctx.high is not None else "NOT_RUN"
         block["probes"]["P0-8"] = note
         block["hv"] = hv
-    except Stop as e:
+    except Exception as e:
         block["stopped"] = True
         block["stop_reason"] = str(e)
+        block["exception_type"] = type(e).__name__
         log.error("STOP: %s", e)
     return block, sets
 
@@ -527,9 +538,12 @@ def ws7_baselines(ctx: Context, hv) -> dict:
     out = {}
     for half, (lo, hi) in hv.items():
         s = ctx.spx[(ctx.spx.index >= lo) & (ctx.spx.index <= hi)]
-        out[half] = fr.unconditional_baseline(s, n_boot=int(ws.get(sp, "ws7_read.n_boot")),
+        baseline = fr.unconditional_baseline(s, n_boot=int(ws.get(sp, "ws7_read.n_boot")),
                                               block=int(ws.get(sp, "ws7_read.block")),
                                               seed=int(ws.get(sp, "ws7_read.seed")))
+        # Filter after computation: skipping engine horizons would change the shared
+        # bootstrap RNG stream and hence the registered legacy WS7 values.
+        out[half] = baseline[baseline["horizon"].isin(ws.get(sp, "horizons.sessions"))].copy()
     return out
 
 
@@ -567,6 +581,7 @@ def run_cell(ctx: Context, cell: str, ci: int, sets: dict, hv, nulls: dict, base
                           "median_ret": obs["median"]}])
     lt = fr.lift_table(cond, baselines[half]).iloc[0]
     row["ws7"] = {"label": "WS7 both-legs read, beside the primary, never a gate",
+                  "window_convention": WS7_CONVENTION,
                   "base_win_rate": _f(lt["base_win_rate"]), "base_win_hi": _f(lt["base_win_hi"]),
                   "base_median_ret": _f(lt["base_median_ret"]), "base_ret_hi": _f(lt["base_ret_hi"]),
                   "win_lift": _f(lt["win_lift"]), "ret_lift": _f(lt["ret_lift"]),
@@ -619,7 +634,7 @@ def full_run(ctx: Context, s0: dict, sets: dict, nulls: dict, registry: ws.Candi
         s = sets[f"H-M.ge{thr}"]
         for half, b in hv.items():
             bset = in_half(s["before"], b)
-            registry.assert_comparator(bset, label=f"H-M.ge{thr}.before.{half}")
+            registry.assert_comparator(bset, label=f"H-M.ge{thr}.before.{half}", seen=True)
             bs = ws.forward_stats(bset, ctx.spx, h3)
             ast = ws.forward_stats(in_half(s["after"], b), ctx.spx, h3)
             hm[f"ge{thr}.{half}"] = {
@@ -643,7 +658,8 @@ def full_run(ctx: Context, s0: dict, sets: dict, nulls: dict, registry: ws.Candi
         "P3": {"claim": ws.get(sp, "predictions.P3.claim"), "p": ws.get(sp, "predictions.P3.p"), "right": bool(p3),
                "basis": {"G3": g3, "added_ge2_late": late_added}}}
     return {"cells": cells, "holm": holm_res, "gate": gate, "g1": g1, "g2": g2, "g3": g3, "thin": thin,
-            "verdict": verdict, "h_m": hm, "predictions": predictions, "baselines": {
+            "verdict": verdict, "h_m": hm, "predictions": predictions,
+            "ws7_window_convention": WS7_CONVENTION, "baselines": {
                 half: b.to_dict(orient="records") for half, b in baselines.items()}}
 
 
@@ -693,6 +709,7 @@ def results_doc(ctx: Context, s0: dict, fr_: dict | None, man: dict) -> dict:
                                                          if k in ("fetched_constituents", "unfetchable_members",
                                                                   "members_per_day_all_sessions")}}
     doc = {"registration": ws.get(sp, "registration"), "run": run,
+           "ws7_window_convention": WS7_CONVENTION,
            "step0": {"stopped": s0["stopped"], "stop_reason": s0["stop_reason"],
                      "probes_pass": {k: v.get("pass") for k, v in s0["probes"].items() if isinstance(v, dict)},
                      "P0-1": s0["probes"].get("P0-1"), "P0-2": s0["probes"].get("P0-2"),
@@ -741,6 +758,40 @@ def results_doc(ctx: Context, s0: dict, fr_: dict | None, man: dict) -> dict:
 
 # ---------------------------------------------------------------- main
 
+def full_start_marker(spec: dict) -> Path:
+    """Private execution state beside the registered run log; never removed automatically."""
+    return (ROOT / ws.get(spec, "outputs.runs_log")).with_name("ws10_full.started.json")
+
+
+def assert_full_not_started(spec: dict) -> None:
+    for path in (full_start_marker(spec), ROOT / ws.get(spec, "outputs.declared_cells"),
+                 ROOT / ws.get(spec, "outputs.full")):
+        if path.exists():
+            raise Stop(f"{path} exists: outcome computation may already have begun; "
+                       "the full run is executed ONCE. Owner review required; do not delete the guard to retry.")
+
+
+def claim_full_run(spec: dict) -> Path:
+    """Claim once before outcomes; exclusive creation prevents concurrent starts.
+
+    Retain even a partial marker after success, failure or interruption. No automatic retry.
+    """
+    assert_full_not_started(spec)
+    path = full_start_marker(spec)
+    path.parent.mkdir(parents=True, exist_ok=True)
+    try:
+        with path.open("x", encoding="utf-8") as fh:
+            json.dump({"state": "STARTED", "started_at_utc": datetime.now(timezone.utc).isoformat(),
+                       "git_revision": _git("rev-parse", "HEAD").strip(), "spec_sha256": ws.spec_hash(),
+                       "note": "Retain after success, failure or interruption; no automatic retry."}, fh)
+            fh.write("\n")
+            fh.flush()
+            os.fsync(fh.fileno())
+    except FileExistsError as e:
+        raise Stop("another full run has claimed the start marker; no retry") from e
+    return path
+
+
 def main(argv=None) -> int:
     ap = argparse.ArgumentParser()
     g = ap.add_mutually_exclusive_group(required=True)
@@ -750,13 +801,13 @@ def main(argv=None) -> int:
     logging.basicConfig(level=logging.INFO, format="%(asctime)s %(levelname)s %(message)s")
     spec = ws.load_spec()
     out_results = ROOT / ws.get(spec, "outputs.declared_cells")
-    if args.full and out_results.exists():
-        raise SystemExit(f"{out_results} exists: the full run is executed ONCE")
+    if args.full:
+        assert_full_not_started(spec)
     t0 = time.time()
     try:
         ctx = load_real(spec)
-    except Stop as e:
-        s0 = {"probes": {}, "stopped": True, "stop_reason": str(e)}
+    except Exception as e:
+        s0 = {"probes": {}, "stopped": True, "stop_reason": str(e), "exception_type": type(e).__name__}
         _dump(ROOT / ws.get(spec, "outputs.step0"), s0)
         append_runs_log({"at_utc": datetime.now(timezone.utc).isoformat(), "mode": "step0" if args.step0 else "full",
                          "stopped": True, "stop_reason": str(e)})
@@ -767,18 +818,25 @@ def main(argv=None) -> int:
     s0, sets = step0(ctx, nulls)
     mode = "step0" if args.step0 else "full"
     registry = ws.CandidateRegistry()
+    # File Step 0 before manifest generation or any outcome computation can fail.
+    _dump(ROOT / ws.get(spec, "outputs.step0"), _clean_step0(s0))
     if args.step0 or s0["stopped"]:
         man = manifest(ctx, s0, registry, mode)
-        _dump(ROOT / ws.get(spec, "outputs.step0"), _clean_step0(s0))
         _dump(ROOT / ws.get(spec, "outputs.manifest"), man)
-        if s0["stopped"] and args.full:
-            _dump(out_results, results_doc(ctx, s0, None, man))
         append_runs_log({"at_utc": man["written_at_utc"], "mode": mode, "git_revision": man["git_revision"],
                          "spec_sha256": man["spec_sha256"], "stopped": s0["stopped"], "stop_reason": s0["stop_reason"],
                          "window_end": s0.get("window_end"), "seconds": round(time.time() - t0)})
         log.info("Step 0 %s (%.0fs)", "STOPPED: " + str(s0["stop_reason"]) if s0["stopped"] else "clear", time.time() - t0)
         return 2 if s0["stopped"] else 0
-    res = full_run(ctx, s0, sets, nulls, registry)
+    claim_full_run(spec)
+    try:
+        res = full_run(ctx, s0, sets, nulls, registry)
+    except (Exception, KeyboardInterrupt) as e:
+        append_runs_log({"at_utc": datetime.now(timezone.utc).isoformat(), "mode": mode,
+                         "phase": "full_run", "state": "FAILED_AFTER_START",
+                         "exception_type": type(e).__name__, "stop_reason": str(e),
+                         "start_marker_retained": str(full_start_marker(spec))})
+        raise
     man = manifest(ctx, s0, registry, mode)
     _dump(ROOT / ws.get(spec, "outputs.step0"), _clean_step0(s0))
     full = {"registration": ws.get(spec, "registration"), "step0": _clean_step0(s0),

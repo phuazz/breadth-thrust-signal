@@ -249,9 +249,12 @@ def _nearest_offsets(cand_events, fire_dates, sessions) -> list[tuple[int, bool]
 def cofire_split(cand_events, fire_dates, sessions) -> dict:
     """Counts of co-firing candidate events by whether the nearest member fire is before, on, or after the
     candidate's session. A tie between two fires equally near on opposite sides is counted by
-    ``cofire_ties`` and the runner treats any tie as a question the spec does not answer."""
+    ``cofire_ties`` separately and excluded from these three counts, per the owner ruling in
+    ESCALATION_ws10.md. The runner reports the tied count beside this partition."""
     split = {"before": 0, "same": 0, "after": 0}
-    for off, _tie in _nearest_offsets(cand_events, fire_dates, sessions):
+    for off, tie in _nearest_offsets(cand_events, fire_dates, sessions):
+        if tie:
+            continue
         split["same" if off == 0 else ("before" if off < 0 else "after")] += 1
     return split
 
@@ -348,8 +351,15 @@ class CandidateRegistry:
     def register(self, name: str, events) -> None:
         self._sets[name] = frozenset(pd.DatetimeIndex(events))
 
-    def assert_comparator(self, events, label: str = "") -> None:
+    def assert_comparator(self, events, label: str = "", *, seen: bool = False) -> None:
         s = frozenset(pd.DatetimeIndex(events))
+        # Owner ruling: an independently constructed empty SEEN set is admissible;
+        # an empty candidate passed without that provenance remains prohibited.
+        if seen and not s:
+            self.checks.append({"comparator": label, "n": 0, "admitted": True,
+                                "reason": "empty SEEN comparator: owner ruling",
+                                "registered_sets_checked": sorted(self._sets)})
+            return
         for name, reg in self._sets.items():
             if s == reg:
                 self.checks.append({"comparator": label, "n": len(s), "refused_as": name})

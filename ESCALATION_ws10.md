@@ -1,6 +1,20 @@
 # ESCALATION — WS10 thrust-subconditions, Step 0 (2026-10-25)
 
-**Status: STOP, filed under the run protocol ("anything the spec does not answer is a STOP").** The full run has
+**Status: OWNER RULING RECEIVED; implementation updated, awaiting the authorised run.**
+
+The owner authorised separate tied counts, retention and explicit labelling of the legacy WS7 half-boundary
+convention, and permission for independently constructed empty SEEN comparators. Frozen files remain unchanged.
+The three-key `cofire_split` excludes ties; the runner reports `tied` beside each pooled and per-half split.
+Before + same + after + tied therefore equals the number of co-firing candidate events. Co-fire shares,
+G2, P1 and verdict rules are unchanged. Empty non-SEEN comparators retain the existing refusal behaviour.
+
+The runner now files Step 0 failures from ordinary exceptions and persists Step 0 before outcome computation.
+A private, exclusively created `data_local/ws10_full.started.json` marker is flushed before the full run and
+retained after success, failure or interruption. It must not be deleted to retry without owner review.
+A Step 0 STOP does not create that marker or the full-results sentinel. Exported WS7 baseline rows are limited
+to the registered horizons; the pinned bootstrap calculation and its random stream are preserved.
+
+The following records the original STOP and the options presented before the ruling. The full run has
 not been executed and no candidate-conditional forward return, win rate, median, lift or percentile has been
 computed. `results/ws10_results.json` has not been written. The study is not STOP_STEP0 on the data. Every data
 probe that ran passed, and this STOP is an unanswered implementation question that only an owner ruling can

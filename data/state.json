@@ -1,10 +1,10 @@
 {
   "contract_version": "1",
   "emitted_by": "breadth-thrust-signal",
-  "emitted_at": "2026-10-30T23:02:31+00:00",
+  "emitted_at": "2026-11-06T23:03:01+00:00",
   "signals": {
     "conviction_meter": {
-      "as_of": "2026-10-30",
+      "as_of": "2026-11-06",
       "state": "1",
       "value": 1.0,
       "zone": "dimensions on: d3",
@@ -14,7 +14,7 @@
       "licence": "public",
       "action_hint": "none",
       "source_file": "data/signals.json",
-      "computed_at": "2026-10-30T23:02:10.582347+00:00",
+      "computed_at": "2026-11-06T23:02:35.103214+00:00",
       "cadence": "manual"
     }
   }
